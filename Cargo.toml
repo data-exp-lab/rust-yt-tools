@@ -1,0 +1,8 @@
+[package]
+name = "yt-tools"
+version = "0.1.0"
+authors = ["Matthew Turk <matthewturk@gmail.com>",
+           "Madicken Munk <madicken.munk@gmail.com>"]
+
+[dependencies]
+byteorder = "^1.2.1"
