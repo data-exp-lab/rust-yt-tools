@@ -1,7 +1,12 @@
+#![feature(link_args)]
+
+#[cfg_attr(target_arch="wasm32", link_args = "--embed-file binary_data.dat@binary_data.dat")]
+extern {}
+
 extern crate byteorder;
 
 use std::env;
-use std::fs::{File};
+use std::fs::{File, read_dir};
 use std::io::Read;
 use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -17,8 +22,15 @@ struct Row {
 }
 
 fn main() {
-    let filename = "binary_data.dat";
-    let mut f = File::open(filename).expect("File not found!");
+    let filename = "./binary_data.dat";
+
+    let mut f = File::open(filename);
+    let mut f = match f {
+      Ok(file)   => file,
+      Err(error) => {
+                      panic!("There was a problem opening the file: {:?}", error)
+                    },
+    };
     let len = match f.metadata() {
         Ok(v) => v.len() as usize,
         Err(_) => 0,
