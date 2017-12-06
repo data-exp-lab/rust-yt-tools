@@ -67,7 +67,6 @@ impl FixedResolutionBuffer {
   }
 
   pub fn deposit_all(& mut self) {
-    self.buffer[self.index(1, 2)] = ......
   }
 
 }
