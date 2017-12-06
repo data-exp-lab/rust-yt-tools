@@ -24,6 +24,7 @@ impl DataPixel {
   }
 }
 
+#[derive(Debug)]
 pub struct FixedResolutionBuffer {
   buffer: Vec<f64>,
   width: usize,
@@ -40,7 +41,11 @@ impl FixedResolutionBuffer {
              y_bounds: (f64, f64)) -> FixedResolutionBuffer {
     let ipdx = width as f64 / (x_bounds.1 - x_bounds.0);
     let ipdy = height as f64 / (y_bounds.1 - y_bounds.0);
-    let buffer: Vec<f64> = Vec::with_capacity(width * height);
+    let mut buffer: Vec<f64> = Vec::with_capacity(width * height);
+    for x in 0..width*height {
+        buffer.push(0.0);
+    }
+
     FixedResolutionBuffer {
         buffer,
         width,
@@ -59,6 +64,10 @@ impl FixedResolutionBuffer {
 
   pub fn deposit(&self, pix: &DataPixel) {
     
+  }
+
+  pub fn deposit_all(& mut self) {
+    self.buffer[self.index(1, 2)] = ......
   }
 
 }
