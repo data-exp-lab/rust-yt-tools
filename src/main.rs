@@ -4,22 +4,16 @@
 extern {}
 
 extern crate byteorder;
+extern crate yt_tools;
 
 use std::env;
 use std::fs::{File, read_dir};
 use std::io::Read;
 use std::mem::size_of;
 use byteorder::{LittleEndian, ReadBytesExt};
+use yt_tools::{DataPixel, FixedResolutionBuffer};
 
 //use std::io::BufReader;
-
-struct Row {
-  px: f64,
-  py: f64,
-  pdx: f64,
-  pdy: f64,
-  val: f64,
-}
 
 fn main() {
     let filename = "./binary_data.dat";
@@ -35,23 +29,23 @@ fn main() {
         Ok(v) => v.len() as usize,
         Err(_) => 0,
     };
-    let rs = size_of::<Row>();
-    let n_rows = len / rs;
-    println!("Reading {} bytes from {} for {} rows\n", len, filename, n_rows);
+    let rs = size_of::<DataPixel>();
+    let n_pix = len / rs;
+    println!("Reading {} bytes from {} for {} pix\n", len, filename, n_pix);
     
-    let mut row: Row;
-    let mut rows: Vec<Row> = Vec::with_capacity(n_rows);
+    let mut pix: Vec<DataPixel> = Vec::with_capacity(n_pix);
 
-    let mut row_count = 0;
+    let mut pix_count = 0;
 
-    while row_count < n_rows {
-        rows.push(Row {
-            val: f.read_f64::<LittleEndian>().unwrap(),
-            pdx: f.read_f64::<LittleEndian>().unwrap(),
-            pdy: f.read_f64::<LittleEndian>().unwrap(),
-            px: f.read_f64::<LittleEndian>().unwrap(),
-            py: f.read_f64::<LittleEndian>().unwrap(),
-        });
-        row_count += 1;
+    while pix_count < n_pix {
+        let val = f.read_f64::<LittleEndian>().unwrap(); 
+        let pdx = f.read_f64::<LittleEndian>().unwrap();
+        let pdy = f.read_f64::<LittleEndian>().unwrap();
+        let px = f.read_f64::<LittleEndian>().unwrap();
+        let py = f.read_f64::<LittleEndian>().unwrap();
+        pix.push(DataPixel::new(px, py, pdx, pdy, val));
+        pix_count += 1;
     }
+    
+    let frb = FixedResolutionBuffer::new(1024, 1024, (0.0, 1.0), (0.0, 1.0));
 }
