@@ -68,9 +68,6 @@ fn main() {
 
     let mut pix_count = 0;
 
-    let mut max_x: f64 = 0.0;
-    let mut max_y: f64 = 0.0;
-
     while pix_count < n_pix {
         let val = f.read_f64::<LittleEndian>().unwrap(); 
         let pdx = f.read_f64::<LittleEndian>().unwrap();
@@ -78,44 +75,22 @@ fn main() {
         let px = f.read_f64::<LittleEndian>().unwrap();
         let py = f.read_f64::<LittleEndian>().unwrap();
 
-        if px > max_x {
-            max_x = px;
-        }
-        if py > max_y {
-            max_y = py;
-        }
-
-        if pix_count < 10 {
-            println!("The data in pixel {:?} is {:?}\n", pix_count, val);
-            println!("The pdx and pdy data in this pixel is {:?} is {:?}\n", 
-                     pdx, pdy);
-            println!("The px and py data in this pixel is {:?} is {:?}\n", 
-                     px, py);
-        }
-        if pix_count > n_pix-10 {
-            println!("The data in pixel {:?} is {:?}\n", pix_count, val);
-            println!("The pdx and pdy data in this pixel is {:?} is {:?}\n", 
-                     pdx, pdy);
-            println!("The px and py data in this pixel is {:?} is {:?}\n", 
-                     px, py);
-        }
-        // let mut specialstring = String::new();
+        // This next section prints the values of the last few 
+        // pixels added to DataPixel. 
         let mut specialstring = format!("The px and py data for pixel {:?} is {:?} is {:?}\n", 
                        pix_count, px, py);
+
         if pix_count > n_pix-4 {
             output_msg(&specialstring);
         }
+        
         pix.push(DataPixel::new(px, py, pdx, pdy, val));
         pix_count += 1;
     }
 
-    println!("The max x, y values are: {:?} {:?} \n", max_x, max_y);
-    // println!("The data at pix 10 is: {:?} \n", pix[10].val);
-    
     let frb = FixedResolutionBuffer::new(1024, 1024, (0.0, 1.0), (0.0, 1.0));
 
     println!("Index 0, 0 becomes {}; Index 512, 512 becomes {}\n",
              frb.index(0, 0), frb.index(512, 512));
 
-    //println!("Frb: {:?}\n", frb);
 }
