@@ -1,13 +1,12 @@
 <html>
     <head>
       <!-- http://asquera.de/blog/2017-04-10/the-path-to-rust-on-the-web/ -->
+        <script src="yt_tools.js"></script>
         <script>
-            // This is read and used by `site.js`
-            var Module = {
-                wasmBinaryFile: "site.wasm"
-            }
+        Rust.yt_tools.then( function(yt_tools) {
+            yt_tools.hello_world();
+        });
         </script>
-        <script src="site.js"></script>
     </head>
     <body></body>
 </html>

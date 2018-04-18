@@ -1,3 +1,15 @@
+#![feature(proc_macro)]
+
+#[macro_use]
+extern crate stdweb;
+
+use stdweb::js_export;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -6,6 +18,7 @@ mod tests {
     }
 }
 
+#[derive(Serialize)]
 pub struct DataPixel {
   px: f64,
   py: f64,
@@ -24,23 +37,27 @@ impl DataPixel {
   }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct FixedResolutionBuffer {
   buffer: Vec<f64>,
   width: usize,
   height: usize,
-  x_bounds: (f64, f64),
-  y_bounds: (f64, f64),
+  x_low: f64,
+  x_high: f64,
+  y_low: f64,
+  y_high: f64,
   ipdx: f64,
   ipdy: f64,
 }
 
 impl FixedResolutionBuffer {
   pub fn new(width: usize, height: usize,
-             x_bounds: (f64, f64),
-             y_bounds: (f64, f64)) -> FixedResolutionBuffer {
-    let ipdx = width as f64 / (x_bounds.1 - x_bounds.0);
-    let ipdy = height as f64 / (y_bounds.1 - y_bounds.0);
+             x_low: f64,
+             x_high: f64,
+             y_low: f64,
+             y_high: f64) -> FixedResolutionBuffer {
+    let ipdx = width as f64 / (x_high - x_low);
+    let ipdy = height as f64 / (y_high - y_low);
     let mut buffer: Vec<f64> = Vec::with_capacity(width * height);
     for x in 0..width*height {
         buffer.push(0.0);
@@ -50,8 +67,8 @@ impl FixedResolutionBuffer {
         buffer,
         width,
         height,
-        x_bounds,
-        y_bounds,
+        x_low, x_high,
+        y_low, y_high,
         ipdx,
         ipdy,
     }
@@ -69,4 +86,9 @@ impl FixedResolutionBuffer {
   pub fn deposit_all(& mut self) {
   }
 
+}
+
+#[js_export]
+fn hello_world() {
+    console!(log, "hello world");
 }

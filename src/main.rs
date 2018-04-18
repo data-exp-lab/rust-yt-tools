@@ -46,7 +46,7 @@ fn main() {
         pix_count += 1;
     }
     
-    let frb = FixedResolutionBuffer::new(1024, 1024, (0.0, 1.0), (0.0, 1.0));
+    let frb = FixedResolutionBuffer::new(1024, 1024, 0.0, 1.0, 0.0, 1.0);
 
     println!("Index 0, 0 becomes {}; Index 512, 512 becomes {}\n",
              frb.index(0, 0), frb.index(512, 512));
