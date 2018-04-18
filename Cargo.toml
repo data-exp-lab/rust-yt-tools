@@ -3,6 +3,9 @@ name = "yt-tools"
 version = "0.1.0"
 authors = ["Matthew Turk <matthewturk@gmail.com>",
            "Madicken Munk <madicken.munk@gmail.com>"]
+description = "Experiments with porting yt components to Rust"
+license = "BSD-3-Clause"
+repository = "data-exp-lab/rust-yt-tools"
 
 [dependencies]
 byteorder = "^1.2.1"
@@ -12,6 +15,7 @@ base64 = "0.8.0"
 [lib]
 name = "yt_tools"
 path = "src/lib.rs"
+crate-type = ["cdylib", "dylib", "lib", "rlib"]
 
 [[bin]]
 name = "runner"

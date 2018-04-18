@@ -1,6 +1,5 @@
 #![feature(link_args)]
 
-#[cfg_attr(target_arch="wasm32", link_args = "--embed-file binary_data.dat@binary_data.dat")]
 extern {}
 
 extern crate byteorder;
