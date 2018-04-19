@@ -4,6 +4,7 @@
 extern crate stdweb;
 
 use stdweb::js_export;
+use stdweb::web::ImageData;
 
 #[macro_use]
 extern crate serde_derive;
@@ -27,6 +28,8 @@ pub struct DataPixel {
   val: f64,
 }
 
+js_serializable!( DataPixel );
+
 impl DataPixel {
   pub fn new(px: f64, py: f64,
              pdx: f64, pdy: f64,
@@ -37,7 +40,7 @@ impl DataPixel {
   }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FixedResolutionBuffer {
   buffer: Vec<f64>,
   width: usize,
@@ -49,6 +52,8 @@ pub struct FixedResolutionBuffer {
   ipdx: f64,
   ipdy: f64,
 }
+
+js_serializable!( FixedResolutionBuffer );
 
 impl FixedResolutionBuffer {
   pub fn new(width: usize, height: usize,
@@ -91,4 +96,17 @@ impl FixedResolutionBuffer {
 #[js_export]
 fn hello_world() {
     console!(log, "hello world");
+    let frb = FixedResolutionBuffer::new(1024, 1024, 0.0, 1.0, 0.0, 1.0);
+js! {
+  var frb = @{frb};
+  console.log(frb);
+};
+}
+
+
+#[js_export]
+fn put_image(image: ImageData) {
+    js!{
+
+    };
 }
