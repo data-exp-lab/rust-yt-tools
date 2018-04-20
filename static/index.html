@@ -2,11 +2,42 @@
     <head>
       <!-- http://asquera.de/blog/2017-04-10/the-path-to-rust-on-the-web/ -->
         <script src="yt_tools.js"></script>
+    </head>
+    <body>
+      <canvas id="bitmap" width=500 height=500 style="height: 500px; width: 500px; border: 1px solid black;">
+      </canvas>
+    </body>
         <script>
+          document.addEventListener("DOMContentLoaded", function(event) { 
         Rust.yt_tools.then( function(yt_tools) {
             yt_tools.hello_world();
+            var oReq = new XMLHttpRequest();
+            oReq.open("GET", "/binary_data.dat", true);
+            oReq.responseType = "arraybuffer";
+
+            oReq.onload = function (oEvent) {
+              var arrayBuffer = oReq.response; // Note: not oReq.responseText
+              var im = yt_tools.put_image(arrayBuffer);
+              im = new Uint8ClampedArray(im);
+              console.log("IM", im);
+              var canvas = document.getElementById('bitmap');
+              var ctx = canvas.getContext('2d');
+              var canvasHeight = canvas.height;
+              var canvasWidth = canvas.width;
+              var nx = 500;
+              var ny = 500;
+              console.log(canvasHeight, canvasWidth);
+              var imageData = ctx.createImageData(500, 500);
+              imageData.data.set(im);
+              ctx.imageSmoothingEnabled = false;
+              createImageBitmap(imageData, 0, 0, nx, ny).then(
+                function(bitmap){
+                    console.log("Drawing bitmap");
+                    ctx.drawImage(bitmap, 0, 0, canvasHeight, canvasWidth);
+                });
+            };
+            oReq.send(null);
         });
+          });
         </script>
-    </head>
-    <body></body>
 </html>
