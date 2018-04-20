@@ -8,8 +8,11 @@
       </canvas>
     </body>
         <script>
+          var yt;
+          var ar;
           document.addEventListener("DOMContentLoaded", function(event) { 
         Rust.yt_tools.then( function(yt_tools) {
+          yt = yt_tools;
             yt_tools.hello_world();
             var oReq = new XMLHttpRequest();
             oReq.open("GET", "/binary_data.dat", true);
@@ -17,6 +20,7 @@
 
             oReq.onload = function (oEvent) {
               var arrayBuffer = oReq.response; // Note: not oReq.responseText
+              ar = arrayBuffer;
               var im = yt_tools.put_image(arrayBuffer);
               im = new Uint8ClampedArray(im);
               console.log("IM", im);
