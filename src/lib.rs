@@ -40,13 +40,34 @@ pub struct Colormaps {
 #[wasm_bindgen]
 impl Colormaps {
   pub fn new() -> Colormaps {
-    let color_maps = HashMap::new();
+    let mut color_maps = HashMap::new();
+    let mut default_cmap: Vec<u8> = Vec::with_capacity(4 * 255);
+    for i in 0..255 {
+        default_cmap.push(i);
+        default_cmap.push(i);
+        default_cmap.push(i);
+        default_cmap.push(255);
+    }
+    color_maps.insert(String::from("default"), default_cmap);
     Colormaps {
         color_maps,
     }
   }
+
   pub fn add_colormap(&mut self, name: String, table: Vec<u8>) {
     self.color_maps.insert(name, table);
+  }
+
+  pub fn normalize_min(&mut self, name: String, buffer: Vec<f64>, min_val: f64) -> Vec<u8> {
+    self.normalize(name, buffer, Some(min_val), None)
+  }
+
+  pub fn normalize_max(&mut self, name: String, buffer: Vec<f64>, max_val: f64) -> Vec<u8> {
+    self.normalize(name, buffer, None, Some(max_val))
+  }
+
+  pub fn normalize_min_max(&mut self, name: String, buffer: Vec<f64>, min_val: f64, max_val: f64) -> Vec<u8> {
+    self.normalize(name, buffer, Some(min_val), Some(max_val))
   }
 }
 
@@ -73,14 +94,22 @@ impl Colormaps {
         None => cmax_val,
     };
     let mut image: Vec<u8> = Vec::with_capacity(buffer.len() * 4);
+    if !self.color_maps.contains_key(&name) {
+        let name = "default";
+    }
+    let cmap = match self.color_maps.get(&name) {
+        Some(cmap) => cmap,
+        None => panic!("Colormap {:?} does not exist.", name)
+    };
     image.resize(buffer.len() * 4, 0);
     for i in 0..buffer.len() {
         let ind = i * 4;
         let scaled = (buffer[i].log10() - cmin_val)/(cmax_val - cmin_val);
-        image[ind + 0] = (scaled * 255.0) as u8;
-        image[ind + 1] = (scaled * 255.0) as u8;
-        image[ind + 2] = (scaled * 255.0) as u8;
-        image[ind + 3] = 255;
+        let bin_id = (scaled * 255.0).floor() as usize;
+        image[ind + 0] = cmap[bin_id * 4 + 0];
+        image[ind + 1] = cmap[bin_id * 4 + 1];
+        image[ind + 2] = cmap[bin_id * 4 + 2];
+        image[ind + 3] = cmap[bin_id * 4 + 3];
     }
     image
   }
