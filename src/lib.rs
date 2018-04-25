@@ -7,6 +7,7 @@ use wasm_bindgen::prelude::*;
 use std::f64;
 use std::mem::size_of;
 use std::convert::{From, Into};
+use std::collections::HashMap;
 
 #[wasm_bindgen]
 pub struct FixedResolutionBuffer {
@@ -28,6 +29,61 @@ pub struct VariableMesh {
   pdx: Vec<f64>,
   pdy: Vec<f64>,
   val: Vec<f64>,
+}
+
+#[wasm_bindgen]
+pub struct Colormaps {
+    // These colormaps are stored unrolled, such that they are RGBA RGBA RGBA
+  color_maps: HashMap<String, Vec<u8>>,
+}
+
+#[wasm_bindgen]
+impl Colormaps {
+  pub fn new() -> Colormaps {
+    let color_maps = HashMap::new();
+    Colormaps {
+        color_maps,
+    }
+  }
+  pub fn add_colormap(&mut self, name: String, table: Vec<u8>) {
+    self.color_maps.insert(name, table);
+  }
+}
+
+// Note that this is a separate impl block, so we do not have the wasm code generated for it; as of
+// the time of writing, Option did not work.
+impl Colormaps {
+  pub fn normalize(&mut self, name: String, buffer: Vec<f64>, min_val: Option<f64>, max_val: Option<f64>) -> Vec<u8> {
+    let cmin_val: f64 = 0.0;
+    let cmax_val: f64 = 0.0;
+    if min_val == None || max_val == None {
+      let cmin_val = f64::MAX;
+      let cmax_val = f64::MIN;
+      for i in 0..buffer.len() {
+          let cmin_val = cmax_val.min(buffer[i]);
+          let cmax_val = cmax_val.max(buffer[i]);
+      }
+    }
+    let cmin_val = match(min_val) {
+        Some(v) => v,
+        None => cmin_val,
+    };
+    let cmax_val = match(max_val) {
+        Some(v) => v,
+        None => cmax_val,
+    };
+    let mut image: Vec<u8> = Vec::with_capacity(buffer.len() * 4);
+    image.resize(buffer.len() * 4, 0);
+    for i in 0..buffer.len() {
+        let ind = i * 4;
+        let scaled = (buffer[i].log10() - cmin_val)/(cmax_val - cmin_val);
+        image[ind + 0] = (scaled * 255.0) as u8;
+        image[ind + 1] = (scaled * 255.0) as u8;
+        image[ind + 2] = (scaled * 255.0) as u8;
+        image[ind + 3] = 255;
+    }
+    image
+  }
 }
 
 #[wasm_bindgen]
