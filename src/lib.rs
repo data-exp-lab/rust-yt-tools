@@ -6,6 +6,9 @@ use wasm_bindgen::prelude::*;
 
 use std::f64;
 use std::mem::size_of;
+use std::mem;
+use std::slice;
+use std::os::raw::c_void;
 use std::convert::{From, Into};
 use std::collections::HashMap;
 
@@ -185,13 +188,18 @@ impl FixedResolutionBuffer {
   }
 
   #[wasm_bindgen]
+  pub fn export_buffer(&mut self) -> *mut f64 {
+    self.buffer.as_mut_ptr()
+  }
+
+  #[wasm_bindgen]
   pub fn dump_image(&mut self) -> Vec<u8> {
       let mi = f64::MAX;
       let ma = f64::MIN;
     for i in 0..self.width {
         for j in 0..self.height {
             let mi = mi.min(self.buffer[i * self.width + j]);
-            let ma = mi.max(self.buffer[i * self.width + j]);
+            let ma = ma.max(self.buffer[i * self.width + j]);
         }
     }
     let mi = mi.log10();
@@ -251,4 +259,19 @@ extern {
     fn log_f64(s: &str, a: f64);
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_u32(s: &str, a: u32);
+}
+
+#[wasm_bindgen]
+pub extern "C" fn alloc(size: usize) -> *mut c_void {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    mem::forget(buf);
+    return ptr as *mut c_void;
+}
+
+#[wasm_bindgen]
+pub extern "C" fn dealloc(ptr: *mut c_void, cap: usize) {
+    unsafe  {
+        let _buf = Vec::from_raw_parts(ptr, 0, cap);
+    }
 }
