@@ -1,50 +1,18 @@
-#![feature(proc_macro)]
+#![feature(proc_macro, wasm_custom_section, wasm_import_module)]
 
-#[macro_use]
-extern crate stdweb;
+extern crate wasm_bindgen;
+
+use wasm_bindgen::prelude::*;
 
 use std::f64;
 use std::mem::size_of;
-use stdweb::js_export;
-use stdweb::web::{ImageData, ArrayBuffer, TypedArray};
-use stdweb::unstable::{TryFrom, TryInto};
+use std::mem;
+use std::slice;
+use std::os::raw::c_void;
 use std::convert::{From, Into};
+use std::collections::HashMap;
 
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
-
-#[derive(Serialize)]
-pub struct DataPixel {
-  px: f64,
-  py: f64,
-  pdx: f64,
-  pdy: f64,
-  val: f64,
-}
-
-js_serializable!( DataPixel );
-
-impl DataPixel {
-  pub fn new(px: f64, py: f64,
-             pdx: f64, pdy: f64,
-             val: f64) -> DataPixel {
-    DataPixel {
-      px, py, pdx, pdy, val
-    }
-  }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[wasm_bindgen]
 pub struct FixedResolutionBuffer {
   buffer: Vec<f64>,
   width: usize,
@@ -57,9 +25,142 @@ pub struct FixedResolutionBuffer {
   ipdy: f64,
 }
 
-js_serializable!( FixedResolutionBuffer );
+#[wasm_bindgen]
+pub struct VariableMesh {
+  px: Vec<f64>,
+  py: Vec<f64>,
+  pdx: Vec<f64>,
+  pdy: Vec<f64>,
+  val: Vec<f64>,
+}
 
+#[wasm_bindgen]
+impl VariableMesh {
+  pub fn new(px: Vec<f64>, py: Vec<f64>, pdx: Vec<f64>, pdy: Vec<f64>, val: Vec<f64>) -> VariableMesh {
+      VariableMesh {
+          px, py, pdx, pdy, val
+      }
+  }
+}
+
+pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
+    let f: fn(f64) -> f64 = match(name.to_lowercase().as_ref()) {
+        "log" => |f| f.log10(),
+        "linear" => |f| f,
+        _ => |f| f,
+    };
+    f
+}
+
+#[wasm_bindgen]
+pub struct Colormaps {
+    // These colormaps are stored unrolled, such that they are RGBA RGBA RGBA
+  color_maps: HashMap<String, Vec<u8>>,
+}
+
+#[wasm_bindgen]
+impl Colormaps {
+  pub fn new() -> Colormaps {
+    let mut color_maps = HashMap::new();
+    let mut default_cmap: Vec<u8> = Vec::with_capacity(4 * 256);
+    let mut i: usize = 0;
+    default_cmap.resize(4*256, 0);
+    for i in 0..256 {
+        default_cmap[i * 4 + 0] = i as u8;
+        default_cmap[i * 4 + 1] = i as u8;
+        default_cmap[i * 4 + 2] = i as u8;
+        default_cmap[i * 4 + 3] = 255;
+    }
+    color_maps.insert(String::from("default"), default_cmap.clone());
+    Colormaps {
+        color_maps,
+    }
+  }
+
+  pub fn add_colormap(&mut self, name: String, table: Vec<u8>) {
+    self.color_maps.insert(name, table);
+  }
+
+  // Once we have Option support in wasm-bindgen we'll be able to get rid of these.
+  pub fn normalize(&mut self, name: String, buffer: Vec<f64>, take_log: bool) -> Vec<u8> {
+    self.normalize_(name, buffer, None, None, take_log)
+  }
+
+  pub fn normalize_min(&mut self, name: String, buffer: Vec<f64>, min_val: f64, take_log: bool) -> Vec<u8> {
+    self.normalize_(name, buffer, Some(min_val), None, take_log)
+  }
+
+  pub fn normalize_max(&mut self, name: String, buffer: Vec<f64>, max_val: f64, take_log: bool) -> Vec<u8> {
+    self.normalize_(name, buffer, None, Some(max_val), take_log)
+  }
+
+  pub fn normalize_min_max(&mut self, name: String, buffer: Vec<f64>, min_val: f64, max_val: f64, take_log: bool) -> Vec<u8> {
+    self.normalize_(name, buffer, Some(min_val), Some(max_val), take_log)
+  }
+}
+
+// Note that this is a separate impl block, so we do not have the wasm code generated for it; as of
+// the time of writing, Option did not work.
+impl Colormaps {
+  pub fn normalize_(&mut self, name: String, buffer: Vec<f64>, min_val: Option<f64>, max_val: Option<f64>,
+                   take_log: bool) -> Vec<u8> {
+    let f = match(take_log) {
+        true => get_normalizer("log".to_string()),
+        false => get_normalizer("linear".to_string()),
+    };
+    let mut cmin_val: f64 = 0.0;
+    let mut cmax_val: f64 = 0.0;
+    if min_val == None || max_val == None {
+        log_f64("We're looking for something ...", 0.0);
+      cmin_val = f64::MAX;
+      cmax_val = f64::MIN;
+      for i in 0..buffer.len() {
+          cmin_val = cmin_val.min(buffer[i]);
+          cmax_val = cmax_val.max(buffer[i]);
+      }
+      log_f64("Found ", cmin_val);
+      log_f64("Found ", cmax_val);
+    }
+    cmin_val = match(min_val) {
+        Some(v) => v,
+        None => cmin_val,
+    };
+    cmax_val = match(max_val) {
+        Some(v) => v,
+        None => cmax_val,
+    };
+    let mut image: Vec<u8> = Vec::with_capacity(buffer.len() * 4);
+    if !self.color_maps.contains_key(&name) {
+        let name = "default";
+        log_f64("Choosing default colormap", 1.0);
+    }
+    let cmap = match self.color_maps.get(&name) {
+        Some(cmap) => cmap,
+        None => panic!("Colormap {:?} does not exist.", name)
+    };
+    log_f64("cmin_val", cmin_val);
+    log_f64("cmax_val", cmax_val);
+    cmin_val = f(cmin_val);
+    cmax_val = f(cmax_val);
+    log_f64("cmin_val", cmin_val);
+    log_f64("cmax_val", cmax_val);
+    image.resize(buffer.len() * 4, 0);
+    for i in 0..buffer.len() {
+        let scaled = ((f(buffer[i]) - cmin_val)/(cmax_val - cmin_val))
+                     .min(1.0).max(0.0);
+        let bin_id = (scaled * 255.0) as usize;
+        image[i*4 + 0] = cmap[bin_id * 4 + 0];
+        image[i*4 + 1] = cmap[bin_id * 4 + 1];
+        image[i*4 + 2] = cmap[bin_id * 4 + 2];
+        image[i*4 + 3] = cmap[bin_id * 4 + 3];
+    }
+    image
+  }
+}
+
+#[wasm_bindgen]
 impl FixedResolutionBuffer {
+  #[wasm_bindgen]
   pub fn new(width: usize, height: usize,
              x_low: f64,
              x_high: f64,
@@ -67,10 +168,8 @@ impl FixedResolutionBuffer {
              y_high: f64) -> FixedResolutionBuffer {
     let ipdx = width as f64 / (x_high - x_low);
     let ipdy = height as f64 / (y_high - y_low);
-    let mut buffer: Vec<f64> = Vec::with_capacity(width * height);
-    for x in 0..width*height {
-        buffer.push(0.0);
-    }
+    let mut buffer: Vec<f64> = Vec::with_capacity(width*height);
+    buffer.resize(width * height, 0.0);
 
     FixedResolutionBuffer {
         buffer,
@@ -83,101 +182,96 @@ impl FixedResolutionBuffer {
     }
   }
 
-  pub fn index(&self, xi: usize, yi: usize) -> usize {
-    let index: usize = xi * self.height + yi;
-    index
+  #[wasm_bindgen]
+  pub fn get_buffer(&mut self) -> Vec<f64> {
+    self.buffer.clone()
   }
 
-  pub fn deposit(&mut self, pix: &DataPixel) {
-    // Compute our left edge pixel
-    
-    if pix.px + pix.pdx < self.x_low {
-        return;
-    } else if pix.py + pix.pdy < self.y_low {
-        return;
-    } else if pix.px - pix.pdx > self.x_high {
-        return;
-    } else if pix.py - pix.pdy > self.y_high {
-        return;
-    }
-    let lc: usize = (((pix.px - pix.pdx - self.x_low) * self.ipdx - 1.0)
-                    .floor() as usize);
-    let lr: usize = (((pix.py - pix.pdy - self.y_low) * self.ipdy - 1.0)
-                    .floor() as usize);
-    let rc: usize = (((pix.px + pix.pdx - self.x_low) * self.ipdx + 1.0)
-                    .floor() as usize);
-    let rr: usize = (((pix.py + pix.pdy - self.y_low) * self.ipdy + 1.0)
-                    .floor() as usize);
+  #[wasm_bindgen]
+  pub fn export_buffer(&mut self) -> *mut f64 {
+    self.buffer.as_mut_ptr()
+  }
 
-    for i in lc.max(0)..rc.min(self.width) {
-        for j in lr.max(0)..rr.min(self.height) {
-            let ind = self.index(i, j);
-            self.buffer[ind] = pix.val;
+  #[wasm_bindgen]
+  pub fn dump_image(&mut self) -> Vec<u8> {
+      let mi = f64::MAX;
+      let ma = f64::MIN;
+    for i in 0..self.width {
+        for j in 0..self.height {
+            let mi = mi.min(self.buffer[i * self.width + j]);
+            let ma = ma.max(self.buffer[i * self.width + j]);
         }
     }
-  }
-
-  pub fn deposit_all(&mut self, pixels: &Vec<DataPixel>) {
-      for pix in pixels.iter() {
-        self.deposit(pix);
-      }
-  }
-
-}
-
-#[js_export]
-fn hello_world() {
-    console!(log, "hello world");
-    let frb = FixedResolutionBuffer::new(500, 500, 0.0, 1.0, 0.0, 1.0);
-js! {
-  var frb = @{frb};
-  console.log(frb);
-};
-}
-
-#[js_export]
-fn put_image(buffer: &ArrayBuffer) -> TypedArray<u8> {
-    let fbuffer: TypedArray<f64> = buffer.into();
-    let dpv: Vec<f64> = fbuffer.into();
-    let n_pix = dpv.len() / 5;
-    let mut pix_count: usize = 0;
-    let mut pix: Vec<DataPixel> = Vec::with_capacity(n_pix);
-    let mut mi: f64 = f64::MAX;
-    let mut ma: f64 = f64::MIN;
-    while pix_count < n_pix {
-        let val = dpv[5 * pix_count + 0];
-        let pdx = dpv[5 * pix_count + 1];
-        let pdy = dpv[5 * pix_count + 2];
-        let px = dpv[5 * pix_count + 3];
-        let py = dpv[5 * pix_count + 4];
-        pix.push(DataPixel::new(px, py, pdx, pdy, val));
-        pix_count += 1;
-        mi = mi.min(py);
-        ma = ma.max(py);
-    }
-    js!{console.log("bounds", @{mi}, @{ma}, @{n_pix as u32});};
-    let mut frb = FixedResolutionBuffer::new(500, 500, 0.0, 1.0, 0.0, 1.0);
-    frb.deposit_all(&pix);
-    let mut image: Vec<u8> = Vec::with_capacity(4*frb.width*frb.height);
-    let cap = image.capacity();
-    for i in 0..(frb.width*frb.height) {
-        if frb.buffer[i] > 0.0 {
-            mi = mi.min(frb.buffer[i]);
+    let mi = mi.log10();
+    let ma = ma.log10();
+    let mut image: Vec<u8> = Vec::with_capacity(self.width * self.height * 4);
+    image.resize(self.width * self.height * 4, 0);
+    for i in 0..self.width {
+        for j in 0..self.height {
+            let ind = i * self.width * 4;
+            let scaled = (self.buffer[i*self.width + j].log10() - mi)/(ma - mi);
+            image[ind + 0] = (scaled * 255.0) as u8;
+            image[ind + 1] = (scaled * 255.0) as u8;
+            image[ind + 2] = (scaled * 255.0) as u8;
+            image[ind + 3] = 255;
         }
-        ma = ma.max(frb.buffer[i]);
     }
-    mi = mi.log10();
-    ma = ma.log10();
-    for i in 0..(frb.width*frb.height) {
-        let mut scaled: u8 = (255.0 * (frb.buffer[i].log10() - mi)/(ma - mi)) as u8;
-        if(frb.buffer[i] == 0.0) { scaled = 0; }
-        image.push(scaled);
-        if(frb.buffer[i] == 0.0) { scaled = 255; }
-        image.push(scaled);
-        image.push(scaled);
-        image.push(255);
-        
+    image
+  }
+
+  #[wasm_bindgen]
+  pub fn deposit(&mut self, vmesh: &VariableMesh) -> u32 {
+    let mut count : u32 = 0;
+    for pix_i in 0..vmesh.px.len() {
+        // Compute our left edge pixel
+        if vmesh.px[pix_i] + vmesh.pdx[pix_i] < self.x_low {
+            continue;
+        } else if vmesh.py[pix_i] + vmesh.pdy[pix_i] < self.y_low {
+            continue;
+        } else if vmesh.px[pix_i] - vmesh.pdx[pix_i] > self.x_high {
+            continue;
+        } else if vmesh.py[pix_i] - vmesh.pdy[pix_i] > self.y_high {
+            continue;
+        }
+        let lc: usize = (((vmesh.px[pix_i] - vmesh.pdx[pix_i] - self.x_low) * self.ipdx - 1.0)
+                        .floor() as usize);
+        let lr: usize = (((vmesh.py[pix_i] - vmesh.pdy[pix_i] - self.y_low) * self.ipdy - 1.0)
+                        .floor() as usize);
+        let rc: usize = (((vmesh.px[pix_i] + vmesh.pdx[pix_i] - self.x_low) * self.ipdx + 1.0)
+                        .floor() as usize);
+        let rr: usize = (((vmesh.py[pix_i] + vmesh.pdy[pix_i] - self.y_low) * self.ipdy + 1.0)
+                        .floor() as usize);
+
+        for i in lc.max(0)..rc.min(self.width) {
+            for j in lr.max(0)..rr.min(self.height) {
+                self.buffer[i * self.width + j] = vmesh.val[pix_i];
+                count = count + 1;
+            }
+        }
     }
-    let rv : TypedArray<u8> = TypedArray::<u8>::from(&image[..]);
-    rv
+    count
+  }
+}
+
+#[wasm_bindgen]
+extern {
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_f64(s: &str, a: f64);
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_u32(s: &str, a: u32);
+}
+
+#[wasm_bindgen]
+pub extern "C" fn alloc(size: usize) -> *mut c_void {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    mem::forget(buf);
+    return ptr as *mut c_void;
+}
+
+#[wasm_bindgen]
+pub extern "C" fn dealloc(ptr: *mut c_void, cap: usize) {
+    unsafe  {
+        let _buf = Vec::from_raw_parts(ptr, 0, cap);
+    }
 }
