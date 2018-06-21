@@ -168,6 +168,7 @@ impl FixedResolutionBuffer {
              y_high: f64) -> FixedResolutionBuffer {
     let ipdx = width as f64 / (x_high - x_low);
     let ipdy = height as f64 / (y_high - y_low);
+    
     let mut buffer: Vec<f64> = Vec::with_capacity(width*height);
     buffer.resize(width * height, 0.0);
 
@@ -244,7 +245,7 @@ impl FixedResolutionBuffer {
 
         for i in lc.max(0)..rc.min(self.width) {
             for j in lr.max(0)..rr.min(self.height) {
-                self.buffer[i * self.width + j] = vmesh.val[pix_i];
+                self.buffer[(self.height - (j + 1))*self.height + i] = vmesh.val[pix_i];
                 count = count + 1;
             }
         }
