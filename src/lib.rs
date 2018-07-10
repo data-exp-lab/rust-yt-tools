@@ -14,7 +14,6 @@ use std::slice;
 
 #[wasm_bindgen]
 pub struct FixedResolutionBuffer {
-    buffer: Vec<f64>,
     width: usize,
     height: usize,
     x_low: f64,
@@ -90,39 +89,42 @@ impl Colormaps {
     }
 
     // Once we have Option support in wasm-bindgen we'll be able to get rid of these.
-    pub fn normalize(&mut self, name: String, buffer: Vec<f64>, take_log: bool) -> Vec<u8> {
-        self.normalize_(name, buffer, None, None, take_log)
+    pub fn normalize(&mut self, name: String, buffer: Vec<f64>, image: &mut [u8], take_log: bool) {
+        self.normalize_(name, buffer, image, None, None, take_log)
     }
 
     pub fn normalize_min(
         &mut self,
         name: String,
         buffer: Vec<f64>,
+        image: &mut [u8],
         min_val: f64,
-        take_log: bool,
-    ) -> Vec<u8> {
-        self.normalize_(name, buffer, Some(min_val), None, take_log)
+        take_log: bool
+    ) {
+        self.normalize_(name, buffer, image, Some(min_val), None, take_log)
     }
 
     pub fn normalize_max(
         &mut self,
         name: String,
         buffer: Vec<f64>,
+        image: &mut [u8],
         max_val: f64,
-        take_log: bool,
-    ) -> Vec<u8> {
-        self.normalize_(name, buffer, None, Some(max_val), take_log)
+        take_log: bool
+    ) {
+        self.normalize_(name, buffer, image, None, Some(max_val), take_log)
     }
 
     pub fn normalize_min_max(
         &mut self,
         name: String,
         buffer: Vec<f64>,
+        image: &mut [u8],
         min_val: f64,
         max_val: f64,
         take_log: bool,
-    ) -> Vec<u8> {
-        self.normalize_(name, buffer, Some(min_val), Some(max_val), take_log)
+    ) {
+        self.normalize_(name, buffer, image, Some(min_val), Some(max_val), take_log)
     }
 }
 
@@ -133,10 +135,11 @@ impl Colormaps {
         &mut self,
         name: String,
         buffer: Vec<f64>,
+        image: &mut [u8],
         min_val: Option<f64>,
         max_val: Option<f64>,
         take_log: bool,
-    ) -> Vec<u8> {
+    ) {
         let f = match (take_log) {
             true => get_normalizer("log".to_string()),
             false => get_normalizer("linear".to_string()),
@@ -188,7 +191,6 @@ impl Colormaps {
             image[i * 4 + 2] = cmap[bin_id * 4 + 2];
             image[i * 4 + 3] = cmap[bin_id * 4 + 3];
         }
-        image
     }
 }
 
@@ -206,11 +208,7 @@ impl FixedResolutionBuffer {
         let ipdx = width as f64 / (x_high - x_low);
         let ipdy = height as f64 / (y_high - y_low);
 
-        let mut buffer: Vec<f64> = Vec::with_capacity(width * height);
-        buffer.resize(width * height, 0.0);
-
         FixedResolutionBuffer {
-            buffer,
             width,
             height,
             x_low,
@@ -223,23 +221,13 @@ impl FixedResolutionBuffer {
     }
 
     #[wasm_bindgen]
-    pub fn get_buffer(&mut self) -> Vec<f64> {
-        self.buffer.clone()
-    }
-
-    #[wasm_bindgen]
-    pub fn export_buffer(&mut self) -> *mut f64 {
-        self.buffer.as_mut_ptr()
-    }
-
-    #[wasm_bindgen]
-    pub fn dump_image(&mut self) -> Vec<u8> {
+    pub fn dump_image(&mut self, buffer: &mut [f64]) -> Vec<u8> {
         let mi = f64::MAX;
         let ma = f64::MIN;
         for i in 0..self.width {
             for j in 0..self.height {
-                let mi = mi.min(self.buffer[i * self.width + j]);
-                let ma = ma.max(self.buffer[i * self.width + j]);
+                let mi = mi.min(buffer[i * self.width + j]);
+                let ma = ma.max(buffer[i * self.width + j]);
             }
         }
         let mi = mi.log10();
@@ -249,7 +237,7 @@ impl FixedResolutionBuffer {
         for i in 0..self.width {
             for j in 0..self.height {
                 let ind = i * self.width * 4;
-                let scaled = (self.buffer[i * self.width + j].log10() - mi) / (ma - mi);
+                let scaled = (buffer[i * self.width + j].log10() - mi) / (ma - mi);
                 image[ind + 0] = (scaled * 255.0) as u8;
                 image[ind + 1] = (scaled * 255.0) as u8;
                 image[ind + 2] = (scaled * 255.0) as u8;
@@ -260,7 +248,7 @@ impl FixedResolutionBuffer {
     }
 
     #[wasm_bindgen]
-    pub fn deposit(&mut self, vmesh: &VariableMesh) -> u32 {
+    pub fn deposit(&mut self, vmesh: &VariableMesh, buffer: &mut [f64]) -> u32 {
         let mut count: u32 = 0;
         for pix_i in 0..vmesh.px.len() {
             // Compute our left edge pixel
@@ -284,7 +272,7 @@ impl FixedResolutionBuffer {
 
             for i in lc.max(0)..rc.min(self.width) {
                 for j in lr.max(0)..rr.min(self.height) {
-                    self.buffer[(self.height - (j + 1)) * self.height + i] = vmesh.val[pix_i];
+                    buffer[(self.height - (j + 1)) * self.height + i] = vmesh.val[pix_i];
                     count = count + 1;
                 }
             }
