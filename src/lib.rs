@@ -165,7 +165,6 @@ impl Colormaps {
             Some(v) => v,
             None => cmax_val,
         };
-        let mut image: Vec<u8> = Vec::with_capacity(buffer.len() * 4);
         if !self.color_maps.contains_key(&name) {
             let name = "default";
             log_f64("Choosing default colormap", 1.0);
@@ -180,7 +179,6 @@ impl Colormaps {
         cmax_val = f(cmax_val);
         log_f64("cmin_val", cmin_val);
         log_f64("cmax_val", cmax_val);
-        image.resize(buffer.len() * 4, 0);
         for i in 0..buffer.len() {
             let scaled = ((f(buffer[i]) - cmin_val) / (cmax_val - cmin_val))
                 .min(1.0)
