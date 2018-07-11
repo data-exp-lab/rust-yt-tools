@@ -1,6 +1,6 @@
 [package]
 name = "yt-tools"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Matthew Turk <matthewturk@gmail.com>",
            "Madicken Munk <madicken.munk@gmail.com>"]
 description = "Experiments with porting yt components to Rust"
