@@ -147,15 +147,12 @@ impl Colormaps {
         let mut cmin_val: f64 = 0.0;
         let mut cmax_val: f64 = 0.0;
         if min_val == None || max_val == None {
-            log_f64("We're looking for something ...", 0.0);
             cmin_val = f64::MAX;
             cmax_val = f64::MIN;
             for i in 0..buffer.len() {
                 cmin_val = cmin_val.min(buffer[i]);
                 cmax_val = cmax_val.max(buffer[i]);
             }
-            log_f64("Found ", cmin_val);
-            log_f64("Found ", cmax_val);
         }
         cmin_val = match (min_val) {
             Some(v) => v,
@@ -167,18 +164,13 @@ impl Colormaps {
         };
         if !self.color_maps.contains_key(&name) {
             let name = "default";
-            log_f64("Choosing default colormap", 1.0);
         }
         let cmap = match self.color_maps.get(&name) {
             Some(cmap) => cmap,
             None => panic!("Colormap {:?} does not exist.", name),
         };
-        log_f64("cmin_val", cmin_val);
-        log_f64("cmax_val", cmax_val);
         cmin_val = f(cmin_val);
         cmax_val = f(cmax_val);
-        log_f64("cmin_val", cmin_val);
-        log_f64("cmax_val", cmax_val);
         for i in 0..buffer.len() {
             let scaled = ((f(buffer[i]) - cmin_val) / (cmax_val - cmin_val))
                 .min(1.0)
