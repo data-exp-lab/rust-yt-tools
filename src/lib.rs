@@ -149,9 +149,9 @@ impl Colormaps {
         if min_val == None || max_val == None {
             cmin_val = f64::MAX;
             cmax_val = f64::MIN;
-            for i in 0..buffer.len() {
-                cmin_val = cmin_val.min(buffer[i]);
-                cmax_val = cmax_val.max(buffer[i]);
+            for v in &buffer {
+                cmin_val = cmin_val.min(*v);
+                cmax_val = cmax_val.max(*v);
             }
         }
         cmin_val = match (min_val) {
@@ -171,8 +171,8 @@ impl Colormaps {
         };
         cmin_val = f(cmin_val);
         cmax_val = f(cmax_val);
-        for i in 0..buffer.len() {
-            let scaled = ((f(buffer[i]) - cmin_val) / (cmax_val - cmin_val))
+        for (i, &x) in buffer.iter().enumerate() {
+            let scaled = ((f(x) - cmin_val) / (cmax_val - cmin_val))
                 .min(1.0)
                 .max(0.0);
             let bin_id = (scaled * 255.0) as usize;
