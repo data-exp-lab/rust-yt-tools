@@ -8,7 +8,7 @@ license = "BSD-3-Clause"
 repository = "data-exp-lab/rust-yt-tools"
 
 [dependencies]
-wasm-bindgen = "0.2.10"
+wasm-bindgen = "0.2.15"
 
 [lib]
 name = "yt_tools"

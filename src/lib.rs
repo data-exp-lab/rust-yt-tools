@@ -1,4 +1,4 @@
-#![feature(proc_macro, wasm_custom_section, wasm_import_module, use_extern_macros)]
+#![feature(use_extern_macros)]
 
 extern crate wasm_bindgen;
 
@@ -35,6 +35,7 @@ pub struct VariableMesh {
 
 #[wasm_bindgen]
 impl VariableMesh {
+    #[wasm_bindgen(constructor)]
     pub fn new(
         px: Vec<f64>,
         py: Vec<f64>,
@@ -69,6 +70,7 @@ pub struct Colormaps {
 
 #[wasm_bindgen]
 impl Colormaps {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Colormaps {
         let mut color_maps = HashMap::new();
         let mut default_cmap: Vec<u8> = Vec::with_capacity(4 * 256);
@@ -99,7 +101,7 @@ impl Colormaps {
         buffer: Vec<f64>,
         image: &mut [u8],
         min_val: f64,
-        take_log: bool
+        take_log: bool,
     ) {
         self.normalize_(name, buffer, image, Some(min_val), None, take_log)
     }
@@ -110,7 +112,7 @@ impl Colormaps {
         buffer: Vec<f64>,
         image: &mut [u8],
         max_val: f64,
-        take_log: bool
+        take_log: bool,
     ) {
         self.normalize_(name, buffer, image, None, Some(max_val), take_log)
     }
@@ -186,7 +188,7 @@ impl Colormaps {
 
 #[wasm_bindgen]
 impl FixedResolutionBuffer {
-    #[wasm_bindgen]
+    #[wasm_bindgen(constructor)]
     pub fn new(
         width: usize,
         height: usize,
@@ -210,7 +212,6 @@ impl FixedResolutionBuffer {
         }
     }
 
-    #[wasm_bindgen]
     pub fn dump_image(&mut self, buffer: &mut [f64]) -> Vec<u8> {
         let mi = f64::MAX;
         let ma = f64::MIN;
@@ -237,7 +238,6 @@ impl FixedResolutionBuffer {
         image
     }
 
-    #[wasm_bindgen]
     pub fn deposit(&mut self, vmesh: &VariableMesh, buffer: &mut [f64]) -> u32 {
         let mut count: u32 = 0;
         for pix_i in 0..vmesh.px.len() {
@@ -277,19 +277,4 @@ extern "C" {
     fn log_f64(s: &str, a: f64);
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_u32(s: &str, a: u32);
-}
-
-#[wasm_bindgen]
-pub extern "C" fn alloc(size: usize) -> *mut c_void {
-    let mut buf = Vec::with_capacity(size);
-    let ptr = buf.as_mut_ptr();
-    mem::forget(buf);
-    return ptr as *mut c_void;
-}
-
-#[wasm_bindgen]
-pub extern "C" fn dealloc(ptr: *mut c_void, cap: usize) {
-    unsafe {
-        let _buf = Vec::from_raw_parts(ptr, 0, cap);
-    }
 }
