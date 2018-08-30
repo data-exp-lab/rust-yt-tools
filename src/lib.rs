@@ -1,16 +1,10 @@
-#![feature(use_extern_macros)]
-
 extern crate wasm_bindgen;
 
 use wasm_bindgen::prelude::*;
 
 use std::collections::HashMap;
-use std::convert::{From, Into};
+use std::convert::From;
 use std::f64;
-use std::mem;
-use std::mem::size_of;
-use std::os::raw::c_void;
-use std::slice;
 
 #[wasm_bindgen]
 pub struct FixedResolutionBuffer {
@@ -54,7 +48,7 @@ impl VariableMesh {
 }
 
 pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
-    let f: fn(f64) -> f64 = match (name.to_lowercase().as_ref()) {
+    let f: fn(f64) -> f64 = match name.to_lowercase().as_ref() {
         "log" => |f| f.log10(),
         "linear" => |f| f,
         _ => |f| f,
@@ -90,50 +84,7 @@ impl Colormaps {
         self.color_maps.insert(name, table);
     }
 
-    // Once we have Option support in wasm-bindgen we'll be able to get rid of these.
-    pub fn normalize(&mut self, name: String, buffer: Vec<f64>, image: &mut [u8], take_log: bool) {
-        self.normalize_(name, buffer, image, None, None, take_log)
-    }
-
-    pub fn normalize_min(
-        &mut self,
-        name: String,
-        buffer: Vec<f64>,
-        image: &mut [u8],
-        min_val: f64,
-        take_log: bool,
-    ) {
-        self.normalize_(name, buffer, image, Some(min_val), None, take_log)
-    }
-
-    pub fn normalize_max(
-        &mut self,
-        name: String,
-        buffer: Vec<f64>,
-        image: &mut [u8],
-        max_val: f64,
-        take_log: bool,
-    ) {
-        self.normalize_(name, buffer, image, None, Some(max_val), take_log)
-    }
-
-    pub fn normalize_min_max(
-        &mut self,
-        name: String,
-        buffer: Vec<f64>,
-        image: &mut [u8],
-        min_val: f64,
-        max_val: f64,
-        take_log: bool,
-    ) {
-        self.normalize_(name, buffer, image, Some(min_val), Some(max_val), take_log)
-    }
-}
-
-// Note that this is a separate impl block, so we do not have the wasm code generated for it; as of
-// the time of writing, Option did not work.
-impl Colormaps {
-    pub fn normalize_(
+    pub fn normalize(
         &mut self,
         name: String,
         buffer: Vec<f64>,
@@ -142,7 +93,7 @@ impl Colormaps {
         max_val: Option<f64>,
         take_log: bool,
     ) {
-        let f = match (take_log) {
+        let f = match take_log {
             true => get_normalizer("log".to_string()),
             false => get_normalizer("linear".to_string()),
         };
@@ -156,17 +107,14 @@ impl Colormaps {
                 cmax_val = cmax_val.max(*v);
             }
         }
-        cmin_val = match (min_val) {
+        cmin_val = match min_val {
             Some(v) => v,
             None => cmin_val,
         };
-        cmax_val = match (max_val) {
+        cmax_val = match max_val {
             Some(v) => v,
             None => cmax_val,
         };
-        if !self.color_maps.contains_key(&name) {
-            let name = "default";
-        }
         let cmap = match self.color_maps.get(&name) {
             Some(cmap) => cmap,
             None => panic!("Colormap {:?} does not exist.", name),
@@ -212,53 +160,32 @@ impl FixedResolutionBuffer {
         }
     }
 
-    pub fn dump_image(&mut self, buffer: &mut [f64]) -> Vec<u8> {
-        let mi = f64::MAX;
-        let ma = f64::MIN;
-        for i in 0..self.width {
-            for j in 0..self.height {
-                let mi = mi.min(buffer[i * self.width + j]);
-                let ma = ma.max(buffer[i * self.width + j]);
-            }
-        }
-        let mi = mi.log10();
-        let ma = ma.log10();
-        let mut image: Vec<u8> = Vec::with_capacity(self.width * self.height * 4);
-        image.resize(self.width * self.height * 4, 0);
-        for i in 0..self.width {
-            for j in 0..self.height {
-                let ind = i * self.width * 4;
-                let scaled = (buffer[i * self.width + j].log10() - mi) / (ma - mi);
-                image[ind + 0] = (scaled * 255.0) as u8;
-                image[ind + 1] = (scaled * 255.0) as u8;
-                image[ind + 2] = (scaled * 255.0) as u8;
-                image[ind + 3] = 255;
-            }
-        }
-        image
-    }
-
     pub fn deposit(&mut self, vmesh: &VariableMesh, buffer: &mut [f64]) -> u32 {
         let mut count: u32 = 0;
+
+        // We do need to clear the buffer -- in cases where the buffer is completely filled this
+        // will result in extra work being done, but the alternate is to allocate a bunch of memory
+        // and do filling of values anyway, so it may be the best we can do.
+        for val in buffer.iter_mut() {
+            *val = 0.0;
+        }
+
         for pix_i in 0..vmesh.px.len() {
             // Compute our left edge pixel
-            if vmesh.px[pix_i] + vmesh.pdx[pix_i] < self.x_low {
-                continue;
-            } else if vmesh.py[pix_i] + vmesh.pdy[pix_i] < self.y_low {
-                continue;
-            } else if vmesh.px[pix_i] - vmesh.pdx[pix_i] > self.x_high {
-                continue;
-            } else if vmesh.py[pix_i] - vmesh.pdy[pix_i] > self.y_high {
+            if vmesh.px[pix_i] + vmesh.pdx[pix_i] < self.x_low ||
+               vmesh.py[pix_i] + vmesh.pdy[pix_i] < self.y_low ||
+               vmesh.px[pix_i] - vmesh.pdx[pix_i] > self.x_high ||
+               vmesh.py[pix_i] - vmesh.pdy[pix_i] > self.y_high {
                 continue;
             }
-            let lc: usize = (((vmesh.px[pix_i] - vmesh.pdx[pix_i] - self.x_low) * self.ipdx - 1.0)
-                .floor() as usize);
-            let lr: usize = (((vmesh.py[pix_i] - vmesh.pdy[pix_i] - self.y_low) * self.ipdy - 1.0)
-                .floor() as usize);
-            let rc: usize = (((vmesh.px[pix_i] + vmesh.pdx[pix_i] - self.x_low) * self.ipdx + 1.0)
-                .floor() as usize);
-            let rr: usize = (((vmesh.py[pix_i] + vmesh.pdy[pix_i] - self.y_low) * self.ipdy + 1.0)
-                .floor() as usize);
+            let lc: usize = ((vmesh.px[pix_i] - vmesh.pdx[pix_i] - self.x_low) * self.ipdx - 1.0)
+                .floor() as usize;
+            let lr: usize = ((vmesh.py[pix_i] - vmesh.pdy[pix_i] - self.y_low) * self.ipdy - 1.0)
+                .floor() as usize;
+            let rc: usize = ((vmesh.px[pix_i] + vmesh.pdx[pix_i] - self.x_low) * self.ipdx + 1.0)
+                .floor() as usize;
+            let rr: usize = ((vmesh.py[pix_i] + vmesh.pdy[pix_i] - self.y_low) * self.ipdy + 1.0)
+                .floor() as usize;
 
             for i in lc.max(0)..rc.min(self.width) {
                 for j in lr.max(0)..rr.min(self.height) {
