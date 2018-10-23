@@ -5,7 +5,7 @@ authors = ["Matthew Turk <matthewturk@gmail.com>",
            "Madicken Munk <madicken.munk@gmail.com>"]
 description = "Experiments with porting yt components to Rust"
 license = "BSD-3-Clause"
-repository = "data-exp-lab/rust-yt-tools"
+repository = "https://github.com/data-exp-lab/rust-yt-tools"
 
 [dependencies]
 wasm-bindgen = "0.2.15"
