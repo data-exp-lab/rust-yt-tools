@@ -14,12 +14,6 @@ pub struct RGBAValue {
     alpha: u8,
 }
 
-impl RGBAValue {
-    pub fn new(red: u8, green: u8, blue: u8, alpha: u8) -> RGBAValue {
-        RGBAValue { red, green, blue, alpha }
-    }
-}
-
 #[wasm_bindgen]
 pub struct Colormap {
     name: String,
@@ -45,6 +39,13 @@ pub struct VariableMesh {
     pdx: Vec<f64>,
     pdy: Vec<f64>,
     val: Vec<f64>,
+}
+
+
+impl RGBAValue {
+    pub fn new(red: u8, green: u8, blue: u8, alpha: u8) -> RGBAValue {
+        RGBAValue { red, green, blue, alpha }
+    }
 }
 
 #[wasm_bindgen]
