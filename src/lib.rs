@@ -7,6 +7,26 @@ use std::convert::From;
 use std::f64;
 
 #[wasm_bindgen]
+pub struct RGBAValue {
+    red: u8,
+    green: u8,
+    blue: u8,
+    alpha: u8,
+}
+
+impl RGBAValue {
+    pub fn new(red: u8, green: u8, blue: u8, alpha: u8) -> RGBAValue {
+        RGBAValue { red, green, blue, alpha }
+    }
+}
+
+#[wasm_bindgen]
+pub struct Colormap {
+    name: String,
+    table: Vec<RGBAValue>,
+}
+
+#[wasm_bindgen]
 pub struct FixedResolutionBuffer {
     width: usize,
     height: usize,
@@ -28,6 +48,32 @@ pub struct VariableMesh {
 }
 
 #[wasm_bindgen]
+impl Colormap {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        name: String,
+        rgba: Vec<u8>,
+    ) -> Colormap {
+        if rgba.len() % 4 != 0 {
+            panic!("Needs RGBA flattened.");
+        }
+        let mut table: Vec<RGBAValue> = Vec::new();
+        for i in 0..rgba.len()/4 {
+            table.push( RGBAValue::new(
+                rgba[i * 4 + 0],
+                rgba[i * 4 + 1],
+                rgba[i * 4 + 2],
+                rgba[i * 4 + 3]
+            ));
+        }
+        Colormap {
+            name: name.clone(),
+            table: table,
+        }
+    }
+}
+
+#[wasm_bindgen]
 impl VariableMesh {
     #[wasm_bindgen(constructor)]
     pub fn new(
@@ -36,6 +82,7 @@ impl VariableMesh {
         pdx: Vec<f64>,
         pdy: Vec<f64>,
         val: Vec<f64>,
+        //values: HashMap<String, Vec<f64>>,
     ) -> VariableMesh {
         VariableMesh {
             px,
@@ -57,31 +104,30 @@ pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
 }
 
 #[wasm_bindgen]
-pub struct Colormaps {
-    // These colormaps are stored unrolled, such that they are RGBA RGBA RGBA
-    color_maps: HashMap<String, Vec<u8>>,
+pub struct ColormapCollection {
+    color_maps: HashMap<String, Colormap>,
 }
 
 #[wasm_bindgen]
-impl Colormaps {
+impl ColormapCollection {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Colormaps {
+    pub fn new() -> ColormapCollection {
         let mut color_maps = HashMap::new();
-        let mut default_cmap: Vec<u8> = Vec::with_capacity(4 * 256);
-        let mut i: usize = 0;
-        default_cmap.resize(4 * 256, 0);
+        let mut default_cmap: Vec<RGBAValue> = Vec::new();
         for i in 0..256 {
-            default_cmap[i * 4 + 0] = i as u8;
-            default_cmap[i * 4 + 1] = i as u8;
-            default_cmap[i * 4 + 2] = i as u8;
-            default_cmap[i * 4 + 3] = 255;
+            default_cmap.push(RGBAValue::new(i as u8, i as u8, i as u8, 255));
         }
-        color_maps.insert(String::from("default"), default_cmap.clone());
-        Colormaps { color_maps }
+        color_maps.insert(String::from("default"), 
+            Colormap {
+                name: String::from("default"),
+                table: default_cmap,
+            }
+        );
+        ColormapCollection { color_maps }
     }
 
     pub fn add_colormap(&mut self, name: String, table: Vec<u8>) {
-        self.color_maps.insert(name, table);
+        self.color_maps.insert(name.clone(), Colormap::new(name, table));
     }
 
     pub fn normalize(
@@ -126,10 +172,10 @@ impl Colormaps {
                 .min(1.0)
                 .max(0.0);
             let bin_id = (scaled * 255.0) as usize;
-            image[i * 4 + 0] = cmap[bin_id * 4 + 0];
-            image[i * 4 + 1] = cmap[bin_id * 4 + 1];
-            image[i * 4 + 2] = cmap[bin_id * 4 + 2];
-            image[i * 4 + 3] = cmap[bin_id * 4 + 3];
+            image[i * 4 + 0] = cmap.table[bin_id].red;
+            image[i * 4 + 1] = cmap.table[bin_id].green;
+            image[i * 4 + 2] = cmap.table[bin_id].blue;
+            image[i * 4 + 3] = cmap.table[bin_id].alpha;
         }
     }
 }
@@ -169,6 +215,7 @@ impl FixedResolutionBuffer {
         for val in buffer.iter_mut() {
             *val = 0.0;
         }
+        let mut image_buffer: Vec<&mut [f64]> = buffer.chunks_exact_mut( self.height ).collect();
 
         for pix_i in 0..vmesh.px.len() {
             // Compute our left edge pixel
@@ -189,8 +236,8 @@ impl FixedResolutionBuffer {
 
             for i in lc.max(0)..rc.min(self.width) {
                 for j in lr.max(0)..rr.min(self.height) {
-                    buffer[(self.height - (j + 1)) * self.height + i] = vmesh.val[pix_i];
-                    count = count + 1;
+                    image_buffer[i][j] = vmesh.val[pix_i];
+                    count += 1;
                 }
             }
         }
