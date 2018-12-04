@@ -51,26 +51,26 @@ impl FixedResolutionBuffer {
         }
         let mut image_buffer: Vec<&mut [f64]> = buffer.chunks_exact_mut( self.height ).collect();
 
-        for pix_i in 0..vmesh.px.len() {
+        for pixel in vmesh.iter() {
             // Compute our left edge pixel
-            if vmesh.px[pix_i] + vmesh.pdx[pix_i] < self.x_low ||
-               vmesh.py[pix_i] + vmesh.pdy[pix_i] < self.y_low ||
-               vmesh.px[pix_i] - vmesh.pdx[pix_i] > self.x_high ||
-               vmesh.py[pix_i] - vmesh.pdy[pix_i] > self.y_high {
+            if pixel.px + pixel.pdx < self.x_low ||
+               pixel.py + pixel.pdy < self.y_low ||
+               pixel.px - pixel.pdx > self.x_high ||
+               pixel.py - pixel.pdy > self.y_high {
                 continue;
             }
-            let lc: usize = ((vmesh.px[pix_i] - vmesh.pdx[pix_i] - self.x_low) * self.ipdx - 1.0)
+            let lc: usize = ((pixel.px - pixel.pdx - self.x_low) * self.ipdx - 1.0)
                 .floor() as usize;
-            let lr: usize = ((vmesh.py[pix_i] - vmesh.pdy[pix_i] - self.y_low) * self.ipdy - 1.0)
+            let lr: usize = ((pixel.py - pixel.pdy - self.y_low) * self.ipdy - 1.0)
                 .floor() as usize;
-            let rc: usize = ((vmesh.px[pix_i] + vmesh.pdx[pix_i] - self.x_low) * self.ipdx + 1.0)
+            let rc: usize = ((pixel.px + pixel.pdx - self.x_low) * self.ipdx + 1.0)
                 .floor() as usize;
-            let rr: usize = ((vmesh.py[pix_i] + vmesh.pdy[pix_i] - self.y_low) * self.ipdy + 1.0)
+            let rr: usize = ((pixel.py + pixel.pdy - self.y_low) * self.ipdy + 1.0)
                 .floor() as usize;
 
             for i in lc.max(0)..rc.min(self.width) {
                 for j in lr.max(0)..rr.min(self.height) {
-                    image_buffer[i][j] = vmesh.val[pix_i];
+                    image_buffer[i][j] = pixel.val;
                     count += 1;
                 }
             }
