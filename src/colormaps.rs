@@ -23,7 +23,6 @@ pub struct RGBAValue {
 
 #[wasm_bindgen]
 pub struct Colormap {
-    name: String,
     table: Vec<RGBAValue>,
 }
 
@@ -42,7 +41,6 @@ impl RGBAValue {
 impl Colormap {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        name: String,
         rgba: Vec<u8>,
     ) -> Colormap {
         if rgba.len() % 4 != 0 {
@@ -58,7 +56,6 @@ impl Colormap {
             ));
         }
         Colormap {
-            name: name.clone(),
             table: table,
         }
     }
@@ -75,7 +72,6 @@ impl ColormapCollection {
         }
         color_maps.insert(String::from("default"), 
             Colormap {
-                name: String::from("default"),
                 table: default_cmap,
             }
         );
@@ -83,7 +79,7 @@ impl ColormapCollection {
     }
 
     pub fn add_colormap(&mut self, name: String, table: Vec<u8>) {
-        self.color_maps.insert(name.clone(), Colormap::new(name, table));
+        self.color_maps.insert(name.clone(), Colormap::new(table));
     }
 
     pub fn normalize(

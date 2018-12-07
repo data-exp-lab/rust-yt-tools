@@ -1,8 +1,6 @@
 extern crate wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
-use std::collections::HashMap;
-
 #[wasm_bindgen]
 pub struct VariableMesh {
     px: Vec<f64>,
@@ -37,6 +35,16 @@ impl VariableMesh {
         val: Vec<f64>,
         //values: HashMap<String, Vec<f64>>,
     ) -> VariableMesh {
+        let size = px.len();
+        if !( (size == py.len()) &&
+              (size == pdx.len()) &&
+              (size == pdy.len()) &&
+              (size == val.len())
+        ) {
+            // This should eventually be a Result
+            panic!("Size mismatch for Vector components: {:?}, {:?}, {:?}, {:?}, {:?}",
+                   px.len(), py.len(), pdx.len(), pdy.len(), val.len());
+        }
         VariableMesh {
             px,
             py,
@@ -74,5 +82,63 @@ impl<'a> Iterator for VariablePixelIterator<'a> {
                 val: self.values[self.index - 1],
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn create_variable_mesh() {
+        // Create a new variable mesh with basic values
+
+        let _vm_test = VariableMesh::new(
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+        );
+
+    }
+
+    #[test]
+    #[should_panic]
+    fn create_bad_variable_mesh() {
+        let _vm_test = VariableMesh::new(
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![2.0, 3.0, 4.0, 5.0],
+        );
+    }
+
+    #[test]
+    fn test_iterator() {
+        let mut px: Vec<f64> = Vec::new();
+        let mut py: Vec<f64> = Vec::new();
+        let mut pdx: Vec<f64> = Vec::new();
+        let mut pdy: Vec<f64> = Vec::new();
+        let mut val: Vec<f64> = Vec::new();
+        for i in 0..1024*1024 {
+            // Just toss some random stuff in here
+            px.push((i as f64) * 1.0);
+            py.push((i as f64) * 1.2);
+            pdx.push((i as f64) * 0.21);
+            pdy.push((i as f64) * 0.22);
+            val.push((i as f64) * 4.05);
+        }
+        let vm = VariableMesh::new(
+            px, py, pdx, pdy, val
+        );
+        for (i, pixel) in vm.iter().enumerate() {
+            assert_eq!(pixel.px, (i as f64) * 1.0);
+            assert_eq!(pixel.py, (i as f64) * 1.2);
+            assert_eq!(pixel.pdx, (i as f64) * 0.21);
+            assert_eq!(pixel.pdy, (i as f64) * 0.22);
+            assert_eq!(pixel.val, (i as f64) * 4.05);
+        }
+        assert_eq!(vm.iter().count(), 1024*1024);
     }
 }
