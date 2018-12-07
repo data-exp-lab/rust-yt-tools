@@ -8,6 +8,10 @@ mod fixed_resolution_buffer;
 
 use cfg_if::cfg_if;
 
+pub use variable_mesh::VariableMesh;
+pub use colormaps::ColormapCollection;
+pub use fixed_resolution_buffer::FixedResolutionBuffer;
+
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
     // allocator.
