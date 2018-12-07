@@ -14,6 +14,7 @@ pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
 }
 
 #[wasm_bindgen]
+#[derive(Clone, Debug)]
 pub struct RGBAValue {
     red: u8,
     green: u8,
@@ -22,11 +23,13 @@ pub struct RGBAValue {
 }
 
 #[wasm_bindgen]
+#[derive(Clone, Debug)]
 pub struct Colormap {
     table: Vec<RGBAValue>,
 }
 
 #[wasm_bindgen]
+#[derive(Clone, Debug)]
 pub struct ColormapCollection {
     color_maps: HashMap<String, Colormap>,
 }
@@ -119,15 +122,106 @@ impl ColormapCollection {
         };
         cmin_val = f(cmin_val);
         cmax_val = f(cmax_val);
+        let tsize = cmap.table.len();
         for (i, &x) in buffer.iter().enumerate() {
             let scaled = ((f(x) - cmin_val) / (cmax_val - cmin_val))
                 .min(1.0)
                 .max(0.0);
-            let bin_id = (scaled * 255.0) as usize;
+            let bin_id = ((scaled * (tsize as f64)) as usize)
+                          .max(0).min(tsize - 1);
             image[i * 4 + 0] = cmap.table[bin_id].red;
             image[i * 4 + 1] = cmap.table[bin_id].green;
             image[i * 4 + 2] = cmap.table[bin_id].blue;
             image[i * 4 + 3] = cmap.table[bin_id].alpha;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    fn linear_ramp_cmap() -> Vec<u8> {
+        let mut rgba_map: Vec<u8> = Vec::new();
+        for i in 0..256 {
+            rgba_map.push(i as u8);
+            rgba_map.push(0);
+            rgba_map.push(0);
+            rgba_map.push(255);
+        }
+        rgba_map
+    }
+
+    #[test]
+    fn create_colormap() {
+        // We will make a vector. This is in R, G, B, A order.
+        // We will make it with linearly ramping R, 255 A, and 0 elsewhere.
+        let rgba_map = linear_ramp_cmap();
+        let _cm = Colormap::new(rgba_map);
+        // Test that our pixels are in the right order.
+        for (i, rgba) in _cm.table.iter().enumerate() {
+            assert_eq!(i as u8, rgba.red);
+            assert_eq!(0, rgba.green);
+            assert_eq!(0, rgba.blue);
+            assert_eq!(255, rgba.alpha);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn create_bad_colormap() {
+        let mut rgba_map = linear_ramp_cmap().clone();
+        rgba_map.pop();
+        let _cm = Colormap::new(rgba_map);
+    }
+
+    #[test]
+    fn create_colormap_collection() {
+        let mut cmap_collection = ColormapCollection::new();
+        cmap_collection.add_colormap("simple".to_string(), linear_ramp_cmap());
+
+        // Create a normalized f64 buffer
+        let mut ibuf: Vec<f64> = Vec::new();
+        for i in 0..256 {
+            ibuf.push( (i as f64) / 256.0);
+        }
+
+        // Our output image
+        let mut obuf: Vec<u8> = Vec::new();
+        obuf.resize(256 * 4, 0);
+
+        cmap_collection.normalize("default".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, false);
+
+        for (i, rgba) in obuf.chunks_exact(4).enumerate() {
+            assert_eq!(rgba[0], i as u8);
+            assert_eq!(rgba[1], i as u8);
+            assert_eq!(rgba[2], i as u8);
+            assert_eq!(rgba[3], 255);
+        }
+
+        cmap_collection.normalize("simple".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, false);
+
+        for (i, rgba) in obuf.chunks_exact(4).enumerate() {
+            assert_eq!(rgba[0], i as u8);
+            assert_eq!(rgba[1], 0);
+            assert_eq!(rgba[2], 0);
+            assert_eq!(rgba[3], 255);
+        }
+        
+        // Create a normalized f64 buffer
+        ibuf.resize(0, 0.0);
+
+        for i in 0..256 {
+            ibuf.push( 10_f64.powf((i as f64) / 256.0));
+        }
+
+        cmap_collection.normalize("simple".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, true);
+        for (i, rgba) in obuf.chunks_exact(4).enumerate() {
+            assert_eq!(rgba[0], i as u8);
+            assert_eq!(rgba[1], 0);
+            assert_eq!(rgba[2], 0);
+            assert_eq!(rgba[3], 255);
         }
     }
 }

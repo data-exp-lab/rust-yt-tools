@@ -2,6 +2,7 @@ extern crate wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+#[derive(Clone, Debug)]
 pub struct VariableMesh {
     px: Vec<f64>,
     py: Vec<f64>,
@@ -10,6 +11,7 @@ pub struct VariableMesh {
     val: Vec<f64>,
 }
 
+#[derive(Clone, Debug, Copy)]
 pub struct VariablePixel{
     pub px: f64,
     pub py: f64,
