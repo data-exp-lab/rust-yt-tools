@@ -1,5 +1,5 @@
 [package]
-name = "yt-tools"
+name = "yt_tools"
 version = "0.2.1"
 authors = ["Matthew Turk <matthewturk@gmail.com>",
            "Madicken Munk <madicken.munk@gmail.com>"]
