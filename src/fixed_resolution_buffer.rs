@@ -60,16 +60,16 @@ impl FixedResolutionBuffer {
                 continue;
             }
             let lc: usize = ((pixel.px - pixel.pdx - self.x_low) * self.ipdx - 1.0)
-                .floor() as usize;
+                .floor().max(0.0) as usize;
             let lr: usize = ((pixel.py - pixel.pdy - self.y_low) * self.ipdy - 1.0)
-                .floor() as usize;
+                .floor().max(0.0) as usize;
             let rc: usize = ((pixel.px + pixel.pdx - self.x_low) * self.ipdx + 1.0)
-                .floor() as usize;
+                .floor().min(self.width as f64) as usize;
             let rr: usize = ((pixel.py + pixel.pdy - self.y_low) * self.ipdy + 1.0)
-                .floor() as usize;
+                .floor().min(self.height as f64) as usize;
 
-            for i in lc.max(0)..rc.min(self.width) {
-                for j in lr.max(0)..rr.min(self.height) {
+            for i in lc..rc {
+                for j in lr..rr {
                     image_buffer[i][j] = pixel.val;
                     count += 1;
                 }
@@ -77,4 +77,20 @@ impl FixedResolutionBuffer {
         }
         count
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use variable_mesh;
+    #[test]
+    fn create_fixed_res_buffer() {
+        let _frb_test = FixedResolutionBuffer::new(256, 256, 0.0, 1.0, 0.0, 1.0);
+        assert_eq!(_frb_test.ipdx, 256.0);
+        assert_eq!(_frb_test.ipdy, 256.0);
+        let _frb_test = FixedResolutionBuffer::new(256, 259, 0.0, 2.0, 0.2, 2.5);
+        assert_eq!(_frb_test.ipdx, 128.0);
+        assert_eq!(_frb_test.ipdy, 259.0 / 2.3);
+    }
+
 }
