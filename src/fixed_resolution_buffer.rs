@@ -49,7 +49,7 @@ impl FixedResolutionBuffer {
         for val in buffer.iter_mut() {
             *val = 0.0;
         }
-        let mut image_buffer: Vec<&mut [f64]> = buffer.chunks_exact_mut( self.height ).collect();
+        let mut image_buffer: Vec<&mut [f64]> = buffer.chunks_exact_mut( self.height ).rev().collect();
 
         for pixel in vmesh.iter() {
             // Compute our left edge pixel
@@ -70,7 +70,7 @@ impl FixedResolutionBuffer {
 
             for i in lc..rc {
                 for j in lr..rr {
-                    image_buffer[i][j] = pixel.val;
+                    image_buffer[j][i] = pixel.val;
                     count += 1;
                 }
             }
