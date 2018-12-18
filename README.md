@@ -12,5 +12,10 @@ steps:
 ```
 git clone https://github.com/data-exp-lab/rust-yt-tools
 cd ./rust-yt-tools
-wasm-pack init --scope data-exp-lab
+wasm-pack build --scope data-exp-lab
 ```
+
+This package is primarily designed as a mechanism for creating wasm code to be
+used in Jupyter widgets, for instance as in the
+[widgyts](https://github.com/data-exp-lab/widgyts/) library, but may grow to
+include more functionality.
