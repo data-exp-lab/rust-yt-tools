@@ -36,31 +36,32 @@ pub struct ColormapCollection {
 
 impl RGBAValue {
     pub fn new(red: u8, green: u8, blue: u8, alpha: u8) -> RGBAValue {
-        RGBAValue { red, green, blue, alpha }
+        RGBAValue {
+            red,
+            green,
+            blue,
+            alpha,
+        }
     }
 }
 
 #[wasm_bindgen]
 impl Colormap {
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        rgba: Vec<u8>,
-    ) -> Colormap {
+    pub fn new(rgba: Vec<u8>) -> Colormap {
         if rgba.len() % 4 != 0 {
             panic!("Needs RGBA flattened.");
         }
         let mut table: Vec<RGBAValue> = Vec::new();
-        for i in 0..rgba.len()/4 {
-            table.push( RGBAValue::new(
+        for i in 0..rgba.len() / 4 {
+            table.push(RGBAValue::new(
                 rgba[i * 4 + 0],
                 rgba[i * 4 + 1],
                 rgba[i * 4 + 2],
-                rgba[i * 4 + 3]
+                rgba[i * 4 + 3],
             ));
         }
-        Colormap {
-            table: table,
-        }
+        Colormap { table: table }
     }
 }
 
@@ -73,10 +74,11 @@ impl ColormapCollection {
         for i in 0..256 {
             default_cmap.push(RGBAValue::new(i as u8, i as u8, i as u8, 255));
         }
-        color_maps.insert(String::from("default"), 
+        color_maps.insert(
+            String::from("default"),
             Colormap {
                 table: default_cmap,
-            }
+            },
         );
         ColormapCollection { color_maps }
     }
@@ -127,8 +129,7 @@ impl ColormapCollection {
             let scaled = ((f(x) - cmin_val) / (cmax_val - cmin_val))
                 .min(1.0)
                 .max(0.0);
-            let bin_id = ((scaled * (tsize as f64)) as usize)
-                          .max(0).min(tsize - 1);
+            let bin_id = ((scaled * (tsize as f64)) as usize).max(0).min(tsize - 1);
             image[i * 4 + 0] = cmap.table[bin_id].red;
             image[i * 4 + 1] = cmap.table[bin_id].green;
             image[i * 4 + 2] = cmap.table[bin_id].blue;
@@ -184,14 +185,21 @@ mod tests {
         // Create a normalized f64 buffer
         let mut ibuf: Vec<f64> = Vec::new();
         for i in 0..256 {
-            ibuf.push( (i as f64) / 256.0);
+            ibuf.push((i as f64) / 256.0);
         }
 
         // Our output image
         let mut obuf: Vec<u8> = Vec::new();
         obuf.resize(256 * 4, 0);
 
-        cmap_collection.normalize("default".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, false);
+        cmap_collection.normalize(
+            "default".to_string(),
+            ibuf.clone(),
+            obuf.as_mut_slice(),
+            None,
+            None,
+            false,
+        );
 
         for (i, rgba) in obuf.chunks_exact(4).enumerate() {
             assert_eq!(rgba[0], i as u8);
@@ -200,7 +208,14 @@ mod tests {
             assert_eq!(rgba[3], 255);
         }
 
-        cmap_collection.normalize("simple".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, false);
+        cmap_collection.normalize(
+            "simple".to_string(),
+            ibuf.clone(),
+            obuf.as_mut_slice(),
+            None,
+            None,
+            false,
+        );
 
         for (i, rgba) in obuf.chunks_exact(4).enumerate() {
             assert_eq!(rgba[0], i as u8);
@@ -208,15 +223,22 @@ mod tests {
             assert_eq!(rgba[2], 0);
             assert_eq!(rgba[3], 255);
         }
-        
+
         // Create a normalized f64 buffer
         ibuf.resize(0, 0.0);
 
         for i in 0..256 {
-            ibuf.push( 10_f64.powf((i as f64) / 256.0));
+            ibuf.push(10_f64.powf((i as f64) / 256.0));
         }
 
-        cmap_collection.normalize("simple".to_string(), ibuf.clone(), obuf.as_mut_slice(), None, None, true);
+        cmap_collection.normalize(
+            "simple".to_string(),
+            ibuf.clone(),
+            obuf.as_mut_slice(),
+            None,
+            None,
+            true,
+        );
         for (i, rgba) in obuf.chunks_exact(4).enumerate() {
             assert_eq!(rgba[0], i as u8);
             assert_eq!(rgba[1], 0);

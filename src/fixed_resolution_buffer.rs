@@ -1,6 +1,6 @@
 extern crate wasm_bindgen;
-use wasm_bindgen::prelude::*;
 use variable_mesh::VariableMesh;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct FixedResolutionBuffer {
@@ -49,24 +49,30 @@ impl FixedResolutionBuffer {
         for val in buffer.iter_mut() {
             *val = 0.0;
         }
-        let mut image_buffer: Vec<&mut [f64]> = buffer.chunks_exact_mut( self.height ).rev().collect();
+        let mut image_buffer: Vec<&mut [f64]> =
+            buffer.chunks_exact_mut(self.height).rev().collect();
 
         for pixel in vmesh.iter() {
             // Compute our left edge pixel
-            if pixel.px + pixel.pdx < self.x_low ||
-               pixel.py + pixel.pdy < self.y_low ||
-               pixel.px - pixel.pdx > self.x_high ||
-               pixel.py - pixel.pdy > self.y_high {
+            if pixel.px + pixel.pdx < self.x_low
+                || pixel.py + pixel.pdy < self.y_low
+                || pixel.px - pixel.pdx > self.x_high
+                || pixel.py - pixel.pdy > self.y_high
+            {
                 continue;
             }
             let lc: usize = ((pixel.px - pixel.pdx - self.x_low) * self.ipdx - 1.0)
-                .floor().max(0.0) as usize;
+                .floor()
+                .max(0.0) as usize;
             let lr: usize = ((pixel.py - pixel.pdy - self.y_low) * self.ipdy - 1.0)
-                .floor().max(0.0) as usize;
+                .floor()
+                .max(0.0) as usize;
             let rc: usize = ((pixel.px + pixel.pdx - self.x_low) * self.ipdx + 1.0)
-                .floor().min(self.width as f64) as usize;
+                .floor()
+                .min(self.width as f64) as usize;
             let rr: usize = ((pixel.py + pixel.pdy - self.y_low) * self.ipdy + 1.0)
-                .floor().min(self.height as f64) as usize;
+                .floor()
+                .min(self.height as f64) as usize;
 
             for i in lc..rc {
                 for j in lr..rr {

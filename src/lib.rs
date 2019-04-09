@@ -1,16 +1,16 @@
 extern crate cfg_if;
 extern crate wasm_bindgen;
 
-mod utils;
 mod colormaps;
-mod variable_mesh;
 mod fixed_resolution_buffer;
+mod utils;
+mod variable_mesh;
 
 use cfg_if::cfg_if;
 
-pub use variable_mesh::VariableMesh;
 pub use colormaps::ColormapCollection;
 pub use fixed_resolution_buffer::FixedResolutionBuffer;
+pub use variable_mesh::VariableMesh;
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -42,24 +42,24 @@ mod tests {
 
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
-        // Compute our widths, which we'll use to generate the 
+        // Compute our widths, which we'll use to generate the
         let mut widths_x: Vec<f64> = Vec::new();
         let mut widths_y: Vec<f64> = Vec::new();
         for _i in 0.._nval {
             // Just some generic values which we'll clean up at the end.
             // We do the second divide by two so that we have half-widths
-            let _px = (1.0 - sum_x)/2.0;
+            let _px = (1.0 - sum_x) / 2.0;
             // Also note that we're going to do something funky here,
             // just to make sure we're not always the same for x and y.
-            let _py = (0.9 - sum_y)/2.0;
-            widths_x.push(_px/2.0);
-            widths_y.push(_py/2.0);
+            let _py = (0.9 - sum_y) / 2.0;
+            widths_x.push(_px / 2.0);
+            widths_y.push(_py / 2.0);
             sum_x += _px;
             sum_y += _py;
         }
 
-        widths_x.push((1.0 - sum_x)/2.0);
-        widths_y.push((1.0 - sum_y)/2.0);
+        widths_x.push((1.0 - sum_x) / 2.0);
+        widths_y.push((1.0 - sum_y) / 2.0);
 
         let mut x;
         let mut y;

@@ -12,7 +12,7 @@ pub struct VariableMesh {
 }
 
 #[derive(Clone, Debug, Copy)]
-pub struct VariablePixel{
+pub struct VariablePixel {
     pub px: f64,
     pub py: f64,
     pub pdx: f64,
@@ -20,7 +20,7 @@ pub struct VariablePixel{
     pub val: f64,
 }
 
-pub struct VariablePixelIterator<'a>  {
+pub struct VariablePixelIterator<'a> {
     mesh: &'a VariableMesh,
     index: usize,
     values: &'a Vec<f64>,
@@ -38,14 +38,20 @@ impl VariableMesh {
         //values: HashMap<String, Vec<f64>>,
     ) -> VariableMesh {
         let size = px.len();
-        if !( (size == py.len()) &&
-              (size == pdx.len()) &&
-              (size == pdy.len()) &&
-              (size == val.len())
-        ) {
+        if !((size == py.len())
+            && (size == pdx.len())
+            && (size == pdy.len())
+            && (size == val.len()))
+        {
             // This should eventually be a Result
-            panic!("Size mismatch for Vector components: {:?}, {:?}, {:?}, {:?}, {:?}",
-                   px.len(), py.len(), pdx.len(), pdy.len(), val.len());
+            panic!(
+                "Size mismatch for Vector components: {:?}, {:?}, {:?}, {:?}, {:?}",
+                px.len(),
+                py.len(),
+                pdx.len(),
+                pdy.len(),
+                val.len()
+            );
         }
         VariableMesh {
             px,
@@ -62,7 +68,7 @@ impl VariableMesh {
         VariablePixelIterator {
             mesh: self,
             index: 0,
-            values: &self.val
+            values: &self.val,
         }
     }
 }
@@ -71,7 +77,6 @@ impl<'a> Iterator for VariablePixelIterator<'a> {
     type Item = VariablePixel;
 
     fn next(&mut self) -> Option<VariablePixel> {
-
         if self.index >= self.mesh.px.len() {
             None
         } else {
@@ -101,7 +106,6 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
         );
-
     }
 
     #[test]
@@ -123,7 +127,7 @@ mod tests {
         let mut pdx: Vec<f64> = Vec::new();
         let mut pdy: Vec<f64> = Vec::new();
         let mut val: Vec<f64> = Vec::new();
-        for i in 0..1024*1024 {
+        for i in 0..1024 * 1024 {
             // Just toss some random stuff in here
             px.push((i as f64) * 1.0);
             py.push((i as f64) * 1.2);
@@ -131,9 +135,7 @@ mod tests {
             pdy.push((i as f64) * 0.22);
             val.push((i as f64) * 4.05);
         }
-        let vm = VariableMesh::new(
-            px, py, pdx, pdy, val
-        );
+        let vm = VariableMesh::new(px, py, pdx, pdy, val);
         for (i, pixel) in vm.iter().enumerate() {
             assert_eq!(pixel.px, (i as f64) * 1.0);
             assert_eq!(pixel.py, (i as f64) * 1.2);
@@ -141,6 +143,6 @@ mod tests {
             assert_eq!(pixel.pdy, (i as f64) * 0.22);
             assert_eq!(pixel.val, (i as f64) * 4.05);
         }
-        assert_eq!(vm.iter().count(), 1024*1024);
+        assert_eq!(vm.iter().count(), 1024 * 1024);
     }
 }
