@@ -14,7 +14,7 @@ pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
 }
 
 #[wasm_bindgen]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RGBAValue {
     red: u8,
     green: u8,
@@ -23,13 +23,13 @@ pub struct RGBAValue {
 }
 
 #[wasm_bindgen]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Colormap {
     table: Vec<RGBAValue>,
 }
 
 #[wasm_bindgen]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ColormapCollection {
     color_maps: HashMap<String, Colormap>,
 }
@@ -55,13 +55,13 @@ impl Colormap {
         let mut table: Vec<RGBAValue> = Vec::new();
         for i in 0..rgba.len() / 4 {
             table.push(RGBAValue::new(
-                rgba[i * 4 + 0],
+                rgba[i * 4],
                 rgba[i * 4 + 1],
                 rgba[i * 4 + 2],
                 rgba[i * 4 + 3],
             ));
         }
-        Colormap { table: table }
+        Colormap { table }
     }
 }
 
@@ -96,9 +96,10 @@ impl ColormapCollection {
         max_val: Option<f64>,
         take_log: bool,
     ) {
-        let f = match take_log {
-            true => get_normalizer("log".to_string()),
-            false => get_normalizer("linear".to_string()),
+        let f = if take_log {
+            get_normalizer("log".to_string())
+        } else {
+            get_normalizer("linear".to_string())
         };
         let mut cmin_val: f64 = 0.0;
         let mut cmax_val: f64 = 0.0;
@@ -130,7 +131,7 @@ impl ColormapCollection {
                 .min(1.0)
                 .max(0.0);
             let bin_id = ((scaled * (tsize as f64)) as usize).max(0).min(tsize - 1);
-            image[i * 4 + 0] = cmap.table[bin_id].red;
+            image[i * 4] = cmap.table[bin_id].red;
             image[i * 4 + 1] = cmap.table[bin_id].green;
             image[i * 4 + 2] = cmap.table[bin_id].blue;
             image[i * 4 + 3] = cmap.table[bin_id].alpha;

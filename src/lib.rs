@@ -65,7 +65,6 @@ mod tests {
         let mut y;
 
         x = 0.0;
-        y = 0.0;
         for &_pdx in widths_x.iter() {
             x += _pdx;
             y = 0.0;

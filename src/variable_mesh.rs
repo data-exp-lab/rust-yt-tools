@@ -64,7 +64,7 @@ impl VariableMesh {
 }
 
 impl VariableMesh {
-    pub fn iter<'a>(&'a self) -> VariablePixelIterator<'a> {
+    pub fn iter(&'_ self) -> VariablePixelIterator<'_> {
         VariablePixelIterator {
             mesh: self,
             index: 0,
@@ -73,7 +73,7 @@ impl VariableMesh {
     }
 }
 
-impl<'a> Iterator for VariablePixelIterator<'a> {
+impl<'a> Iterator for VariablePixelIterator<'_> {
     type Item = VariablePixel;
 
     fn next(&mut self) -> Option<VariablePixel> {

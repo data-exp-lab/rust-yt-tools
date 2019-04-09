@@ -74,9 +74,9 @@ impl FixedResolutionBuffer {
                 .floor()
                 .min(self.height as f64) as usize;
 
-            for i in lc..rc {
-                for j in lr..rr {
-                    image_buffer[j][i] = pixel.val;
+            for row in image_buffer.iter_mut().take(rr).skip(lr) {
+                for image_pix in row.iter_mut().take(rc).skip(lc) {
+                    *image_pix = pixel.val;
                     count += 1;
                 }
             }
@@ -88,7 +88,6 @@ impl FixedResolutionBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use variable_mesh;
     #[test]
     fn create_fixed_res_buffer() {
         let _frb_test = FixedResolutionBuffer::new(256, 256, 0.0, 1.0, 0.0, 1.0);
