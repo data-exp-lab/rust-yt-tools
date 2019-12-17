@@ -1,4 +1,3 @@
-extern crate cfg_if;
 extern crate wasm_bindgen;
 
 mod colormaps;
@@ -6,21 +5,15 @@ mod fixed_resolution_buffer;
 mod utils;
 mod variable_mesh;
 
-use cfg_if::cfg_if;
-
 pub use colormaps::ColormapCollection;
 pub use fixed_resolution_buffer::FixedResolutionBuffer;
 pub use variable_mesh::VariableMesh;
 
-cfg_if! {
-    // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-    // allocator.
-    if #[cfg(feature = "wee_alloc")] {
-        extern crate wee_alloc;
-        #[global_allocator]
-        static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-    }
-}
+// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+// allocator.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[cfg(test)]
 mod tests {
