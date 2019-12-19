@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 use std::f64;
 
-pub fn get_normalizer(name: String) -> (fn(f64) -> f64) {
+pub fn get_normalizer(name: String) -> fn(f64) -> f64 {
     let f: fn(f64) -> f64 = match name.to_lowercase().as_ref() {
         "log" => |f| f.log10(),
         "linear" => |f| f,
