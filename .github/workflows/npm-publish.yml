@@ -1,0 +1,30 @@
+name: Cargo Public
+
+on:
+  release:
+    types: [ created ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    - run: cargo test
+    - run: wasm-pack test --headless --chrome
+    - run: wasm-pack test --headless --firefox
+    - name: Scoped Build
+      env:
+        PACKAGE_SCOPE: data-exp-lab
+      run: wasm-pack build --release --scope $PACKAGE_SCOPE
+    - name: publish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      run: wasm-pack publish
