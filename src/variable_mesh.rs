@@ -1,6 +1,8 @@
 extern crate wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
+use std::collections::HashMap;
+
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct VariableMesh {
@@ -8,7 +10,7 @@ pub struct VariableMesh {
     py: Vec<f64>,
     pdx: Vec<f64>,
     pdy: Vec<f64>,
-    val: Vec<f64>,
+    field_values: HashMap<String, Vec<f64>>,
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -29,46 +31,44 @@ pub struct VariablePixelIterator<'a> {
 #[wasm_bindgen]
 impl VariableMesh {
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        px: Vec<f64>,
-        py: Vec<f64>,
-        pdx: Vec<f64>,
-        pdy: Vec<f64>,
-        val: Vec<f64>,
-        //values: HashMap<String, Vec<f64>>,
-    ) -> VariableMesh {
+    pub fn new(px: Vec<f64>, py: Vec<f64>, pdx: Vec<f64>, pdy: Vec<f64>) -> VariableMesh {
         let size = px.len();
-        if !((size == py.len())
-            && (size == pdx.len())
-            && (size == pdy.len())
-            && (size == val.len()))
-        {
+        if !((size == py.len()) && (size == pdx.len()) && (size == pdy.len())) {
             // This should eventually be a Result
             panic!(
-                "Size mismatch for Vector components: {:?}, {:?}, {:?}, {:?}, {:?}",
+                "Size mismatch for Vector components: {:?}, {:?}, {:?}, {:?}",
                 px.len(),
                 py.len(),
                 pdx.len(),
-                pdy.len(),
-                val.len()
+                pdy.len()
             );
         }
+        let mut field_values = HashMap::new();
+        let mut default_values: Vec<f64> = Vec::new();
+        for i in 0..size {
+            default_values.push(1.0);
+        }
+        field_values.insert(String::from("ones"), default_values);
         VariableMesh {
             px,
             py,
             pdx,
             pdy,
-            val,
+            field_values,
         }
+    }
+    pub fn add_field(&mut self, name: &str, field_values: Vec<f64>) {
+        self.field_values.insert(String::from(name), field_values);
     }
 }
 
 impl VariableMesh {
-    pub fn iter(&'_ self) -> VariablePixelIterator<'_> {
+    pub fn iter(&'_ self, field: &str) -> VariablePixelIterator<'_> {
+        let values = self.field_values.get(field).unwrap();
         VariablePixelIterator {
             mesh: self,
             index: 0,
-            values: &self.val,
+            values: &values,
         }
     }
 }
@@ -103,8 +103,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0, 5.0]
         );
     }
 
@@ -115,8 +114,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![2.0, 3.0, 4.0, 5.0],
+            vec![1.0, 2.0, 3.0, 4.0]
         );
     }
 
@@ -135,14 +133,15 @@ mod tests {
             pdy.push((i as f64) * 0.22);
             val.push((i as f64) * 4.05);
         }
-        let vm = VariableMesh::new(px, py, pdx, pdy, val);
-        for (i, pixel) in vm.iter().enumerate() {
+        let vm = VariableMesh::new(px, py, pdx, pdy);
+        vm.add_field("default", val);
+        for (i, pixel) in vm.iter("default").enumerate() {
             assert_eq!(pixel.px, (i as f64) * 1.0);
             assert_eq!(pixel.py, (i as f64) * 1.2);
             assert_eq!(pixel.pdx, (i as f64) * 0.21);
             assert_eq!(pixel.pdy, (i as f64) * 0.22);
             assert_eq!(pixel.val, (i as f64) * 4.05);
         }
-        assert_eq!(vm.iter().count(), 1024 * 1024);
+        assert_eq!(vm.iter("default").count(), 1024 * 1024);
     }
 }
