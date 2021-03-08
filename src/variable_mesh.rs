@@ -45,7 +45,7 @@ impl VariableMesh {
         }
         let mut field_values = HashMap::new();
         let mut default_values: Vec<f64> = Vec::new();
-        for i in 0..size {
+        for _i in 0..size {
             default_values.push(1.0);
         }
         field_values.insert(String::from("ones"), default_values);
@@ -133,7 +133,7 @@ mod tests {
             pdy.push((i as f64) * 0.22);
             val.push((i as f64) * 4.05);
         }
-        let vm = VariableMesh::new(px, py, pdx, pdy);
+        let mut vm = VariableMesh::new(px, py, pdx, pdy);
         vm.add_field("default", val);
         for (i, pixel) in vm.iter("default").enumerate() {
             assert_eq!(pixel.px, (i as f64) * 1.0);
@@ -143,5 +143,13 @@ mod tests {
             assert_eq!(pixel.val, (i as f64) * 4.05);
         }
         assert_eq!(vm.iter("default").count(), 1024 * 1024);
+        for (i, pixel) in vm.iter("ones").enumerate() {
+            assert_eq!(pixel.px, (i as f64) * 1.0);
+            assert_eq!(pixel.py, (i as f64) * 1.2);
+            assert_eq!(pixel.pdx, (i as f64) * 0.21);
+            assert_eq!(pixel.pdy, (i as f64) * 0.22);
+            assert_eq!(pixel.val, 1.0);
+        }
+        assert_eq!(vm.iter("ones").count(), 1024 * 1024);
     }
 }

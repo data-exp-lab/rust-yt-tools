@@ -40,7 +40,7 @@ impl FixedResolutionBuffer {
         }
     }
 
-    pub fn deposit(&mut self, vmesh: &VariableMesh, buffer: &mut [f64]) -> u32 {
+    pub fn deposit(&mut self, vmesh: &VariableMesh, buffer: &mut [f64], name: String) -> u32 {
         let mut count: u32 = 0;
 
         // We do need to clear the buffer -- in cases where the buffer is completely filled this
@@ -52,7 +52,7 @@ impl FixedResolutionBuffer {
         let mut image_buffer: Vec<&mut [f64]> =
             buffer.chunks_exact_mut(self.height).rev().collect();
 
-        for pixel in vmesh.iter() {
+        for pixel in vmesh.iter(&name) {
             // Compute our left edge pixel
             if pixel.px + pixel.pdx < self.x_low
                 || pixel.py + pixel.pdy < self.y_low

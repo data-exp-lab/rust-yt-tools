@@ -26,7 +26,8 @@ mod tests {
         let mut py: Vec<f64> = Vec::new();
         let mut pdx: Vec<f64> = Vec::new();
         let mut pdy: Vec<f64> = Vec::new();
-        let mut field: Vec<f64> = Vec::new();
+        let mut field1: Vec<f64> = Vec::new();
+        let mut field2: Vec<f64> = Vec::new();
 
         let _nval = 32;
         let _npix = 1024;
@@ -67,7 +68,8 @@ mod tests {
                 py.push(y);
                 pdx.push(_pdx);
                 pdy.push(_pdy);
-                field.push(1.0);
+                field1.push(1.0);
+                field2.push(2.13);
                 y += _pdy;
             }
             assert_eq!(y, 1.0);
@@ -76,10 +78,15 @@ mod tests {
 
         assert_eq!(x, 1.0);
 
-        let _vm = VariableMesh::new(px, py, pdx, pdy, field);
+        let mut _vm = VariableMesh::new(px, py, pdx, pdy);
+        _vm.add_field("default", field1);
+        _vm.add_field("alternate", field2);
 
-        for pixel in _vm.iter() {
+        for pixel in _vm.iter("default") {
             assert_eq!(pixel.val, 1.0);
+        }
+        for pixel in _vm.iter("alternate") {
+            assert_eq!(pixel.val, 2.13);
         }
 
         let mut _frb_test = FixedResolutionBuffer::new(_npix, _npix, 0.0, 1.0, 0.0, 1.0);
@@ -89,10 +96,16 @@ mod tests {
 
         // This does not always work, because of how we compute rows and columns,
         // so we don't assert.  We will eventually do so, though.
-        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice());
+        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "default".to_string());
 
         for &v in buffer.iter() {
             assert_eq!(v, 1.0);
+        }
+
+        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "alternate".to_string());
+
+        for &v in buffer.iter() {
+            assert_eq!(v, 2.13);
         }
     }
 }
