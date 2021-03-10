@@ -60,7 +60,7 @@ impl VariableMesh {
     pub fn add_field(&mut self, name: &str, field_values: Vec<f64>) {
         self.field_values.insert(String::from(name), field_values);
     }
-    pub fn has_field(self, name: &str) -> bool {
+    pub fn has_field(&self, name: &str) -> bool {
         self.field_values.contains_key(name)
     }
 }
