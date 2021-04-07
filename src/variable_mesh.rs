@@ -8,8 +8,10 @@ use std::collections::HashMap;
 pub struct VariableMesh {
     px: Vec<f64>,
     py: Vec<f64>,
+    pz: Vec<f64>,
     pdx: Vec<f64>,
     pdy: Vec<f64>,
+    pdz: Vec<f64>,
     field_values: HashMap<String, Vec<f64>>,
 }
 
@@ -17,8 +19,10 @@ pub struct VariableMesh {
 pub struct VariablePixel {
     pub px: f64,
     pub py: f64,
+    pub pz: f64,
     pub pdx: f64,
     pub pdy: f64,
+    pub pdz: f64,
     pub val: f64,
 }
 
@@ -31,7 +35,14 @@ pub struct VariablePixelIterator<'a> {
 #[wasm_bindgen]
 impl VariableMesh {
     #[wasm_bindgen(constructor)]
-    pub fn new(px: Vec<f64>, py: Vec<f64>, pdx: Vec<f64>, pdy: Vec<f64>) -> VariableMesh {
+    pub fn new(
+        px: Vec<f64>,
+        py: Vec<f64>,
+        pdx: Vec<f64>,
+        pdy: Vec<f64>,
+        pz: Option<Vec<f64>>,
+        pdz: Option<Vec<f64>>,
+    ) -> VariableMesh {
         let size = px.len();
         if !((size == py.len()) && (size == pdx.len()) && (size == pdy.len())) {
             // This should eventually be a Result
@@ -44,16 +55,32 @@ impl VariableMesh {
             );
         }
         let mut field_values = HashMap::new();
-        let mut default_values: Vec<f64> = Vec::new();
-        for _i in 0..size {
-            default_values.push(1.0);
+        let default_values = vec![1.0f64; size];
+        let pz = match pz {
+            Some(v) => v,
+            None => vec![0.0; size],
+        };
+        let pdz = match pdz {
+            Some(v) => v,
+            None => vec![1.0; size],
+        };
+        if !((size == pz.len()) && (size == pdz.len())) {
+            // This should eventually be a Result
+            panic!(
+                "Size mismatch for Vector components: {:?}, {:?}, {:?}",
+                size,
+                pz.len(),
+                pdz.len()
+            );
         }
         field_values.insert(String::from("ones"), default_values);
         VariableMesh {
             px,
             py,
+            pz,
             pdx,
             pdy,
+            pdz,
             field_values,
         }
     }
@@ -87,8 +114,10 @@ impl<'a> Iterator for VariablePixelIterator<'_> {
             Some(VariablePixel {
                 px: self.mesh.px[self.index - 1],
                 py: self.mesh.py[self.index - 1],
+                pz: self.mesh.pz[self.index - 1],
                 pdx: self.mesh.pdx[self.index - 1],
                 pdy: self.mesh.pdy[self.index - 1],
+                pdz: self.mesh.pdz[self.index - 1],
                 val: self.values[self.index - 1],
             })
         }
@@ -106,7 +135,9 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            None,
+            None,
         );
     }
 
@@ -117,7 +148,9 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![1.0, 2.0, 3.0, 4.0]
+            vec![1.0, 2.0, 3.0, 4.0],
+            None,
+            None,
         );
     }
 
@@ -136,7 +169,7 @@ mod tests {
             pdy.push((i as f64) * 0.22);
             val.push((i as f64) * 4.05);
         }
-        let mut vm = VariableMesh::new(px, py, pdx, pdy);
+        let mut vm = VariableMesh::new(px, py, pdx, pdy, None, None);
         vm.add_field("default", val);
         for (i, pixel) in vm.iter("default").enumerate() {
             assert_eq!(pixel.px, (i as f64) * 1.0);
