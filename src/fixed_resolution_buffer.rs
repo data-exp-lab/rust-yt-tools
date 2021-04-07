@@ -57,6 +57,12 @@ impl FixedResolutionBuffer {
             buffer.chunks_exact_mut(self.height).rev().collect();
         for pixel in vmesh.iter(&name) {
             // Compute our left edge pixel
+            if match position {
+                Some(v) => (pixel.pz + pixel.pdz <= v || pixel.pz - pixel.pdz >= v),
+                None => false,
+            } {
+                continue;
+            };
             if pixel.px + pixel.pdx < self.x_low
                 || pixel.py + pixel.pdy < self.y_low
                 || pixel.px - pixel.pdx > self.x_high
@@ -64,12 +70,6 @@ impl FixedResolutionBuffer {
             {
                 continue;
             }
-            if match position {
-                Some(v) => pixel.pz - pixel.pdz > v || pixel.pz + pixel.pdz < v,
-                None => false,
-            } {
-                continue;
-            };
             let lc: usize = ((pixel.px - pixel.pdx - self.x_low) * self.ipdx - 1.0)
                 .floor()
                 .max(0.0) as usize;
