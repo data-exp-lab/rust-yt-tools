@@ -55,7 +55,7 @@ impl VariableMesh {
         };
         let pdz = match pdz {
             Some(v) => v,
-            None => vec![0.0; size],
+            None => vec![1.0; size],
         };
         if !((size == pz.len()) && (size == pdz.len())) {
             // This should eventually be a Result
