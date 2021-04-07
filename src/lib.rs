@@ -78,7 +78,7 @@ mod tests {
 
         assert_eq!(x, 1.0);
 
-        let mut _vm = VariableMesh::new(px, py, pdx, pdy);
+        let mut _vm = VariableMesh::new(px, py, pdx, pdy, None, None);
         _vm.add_field("default", field1);
         _vm.add_field("alternate", field2);
 
