@@ -96,13 +96,13 @@ mod tests {
 
         // This does not always work, because of how we compute rows and columns,
         // so we don't assert.  We will eventually do so, though.
-        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "default".to_string());
+        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "default".to_string(), None);
 
         for &v in buffer.iter() {
             assert_eq!(v, 1.0);
         }
 
-        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "alternate".to_string());
+        let _count = _frb_test.deposit(&_vm, buffer.as_mut_slice(), "alternate".to_string(), None);
 
         for &v in buffer.iter() {
             assert_eq!(v, 2.13);

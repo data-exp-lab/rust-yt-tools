@@ -35,7 +35,14 @@ pub struct VariablePixelIterator<'a> {
 #[wasm_bindgen]
 impl VariableMesh {
     #[wasm_bindgen(constructor)]
-    pub fn new(px: Vec<f64>, py: Vec<f64>, pdx: Vec<f64>, pdy: Vec<f64>, pz: Option<Vec<f64>>, pdz: Option<Vec<f64>>) -> VariableMesh {
+    pub fn new(
+        px: Vec<f64>,
+        py: Vec<f64>,
+        pdx: Vec<f64>,
+        pdy: Vec<f64>,
+        pz: Option<Vec<f64>>,
+        pdz: Option<Vec<f64>>,
+    ) -> VariableMesh {
         let size = px.len();
         if !((size == py.len()) && (size == pdx.len()) && (size == pdy.len())) {
             // This should eventually be a Result
@@ -130,7 +137,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             None,
-            None
+            None,
         );
     }
 
@@ -143,7 +150,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![1.0, 2.0, 3.0, 4.0],
             None,
-            None
+            None,
         );
     }
 
