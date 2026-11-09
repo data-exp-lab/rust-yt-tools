@@ -192,8 +192,8 @@ mod tests {
         let mut buffer: Vec<f64> = Vec::new();
         buffer.resize(_npix * _npix, 0.0);
 
-        // This does not always work, because of how we compute rows and columns,
-        // so we don't assert.  We will eventually do so, though.
+        // Each requested position falls inside exactly one layer, so the whole
+        // buffer should be filled with that layer's values.
         for (&_pz, &_pdz) in zs.iter().zip(pdzs.iter()) {
             buffer.fill(0.0);
             let _count = _frb_test.deposit(
@@ -214,6 +214,29 @@ mod tests {
             );
             for &v in buffer.iter() {
                 assert_eq!(v, _pdz);
+            }
+        }
+    }
+
+    #[test]
+    fn deposit_2d_vm_ignores_position() {
+        // A mesh built without pz/pdz should deposit everything regardless of
+        // the requested position.
+        let mut vm = VariableMesh::new(
+            vec![0.25, 0.75, 0.25, 0.75],
+            vec![0.25, 0.25, 0.75, 0.75],
+            vec![0.25; 4],
+            vec![0.25; 4],
+            None,
+            None,
+        );
+        vm.add_field("default", vec![3.0; 4]);
+        let mut frb = FixedResolutionBuffer::new(16, 16, 0.0, 1.0, 0.0, 1.0);
+        let mut buffer = vec![0.0; 16 * 16];
+        for position in [None, Some(0.0), Some(5.0), Some(-100.0)] {
+            frb.deposit(&vm, buffer.as_mut_slice(), "default".to_string(), position);
+            for &v in buffer.iter() {
+                assert_eq!(v, 3.0);
             }
         }
     }

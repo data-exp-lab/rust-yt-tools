@@ -60,9 +60,11 @@ impl VariableMesh {
             Some(v) => v,
             None => vec![0.0; size],
         };
+        // Without z information, give every pixel an unbounded z-extent so that
+        // a `position` passed to `deposit` never filters anything out.
         let pdz = match pdz {
             Some(v) => v,
-            None => vec![1.0; size],
+            None => vec![f64::INFINITY; size],
         };
         if !((size == pz.len()) && (size == pdz.len())) {
             // This should eventually be a Result

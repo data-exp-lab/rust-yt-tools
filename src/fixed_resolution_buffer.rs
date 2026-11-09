@@ -56,13 +56,13 @@ impl FixedResolutionBuffer {
         let mut image_buffer: Vec<&mut [f64]> =
             buffer.chunks_exact_mut(self.height).rev().collect();
         for pixel in vmesh.iter(&name) {
+            // Skip pixels whose z-extent does not contain the requested position.
+            if let Some(v) = position {
+                if pixel.pz + pixel.pdz <= v || pixel.pz - pixel.pdz >= v {
+                    continue;
+                }
+            }
             // Compute our left edge pixel
-            if match position {
-                Some(v) => (pixel.pz + pixel.pdz <= v || pixel.pz - pixel.pdz >= v),
-                None => false,
-            } {
-                continue;
-            };
             if pixel.px + pixel.pdx < self.x_low
                 || pixel.py + pixel.pdy < self.y_low
                 || pixel.px - pixel.pdx > self.x_high
