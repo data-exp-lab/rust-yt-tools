@@ -1,5 +1,5 @@
 extern crate wasm_bindgen;
-use variable_mesh::VariableMesh;
+use crate::variable_mesh::VariableMesh;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
