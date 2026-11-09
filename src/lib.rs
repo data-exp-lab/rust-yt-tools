@@ -9,12 +9,6 @@ pub use colormaps::ColormapCollection;
 pub use fixed_resolution_buffer::FixedResolutionBuffer;
 pub use variable_mesh::VariableMesh;
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 #[cfg(test)]
 mod tests {
     use super::*;
