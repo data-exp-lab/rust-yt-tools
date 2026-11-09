@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,9 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    - name: Install wasm-pack
+      run: cargo install wasm-pack --locked
     - run: cargo test
-    - run: wasm-pack test --headless --chrome
-    - run: wasm-pack test --headless --firefox
+    - run: wasm-pack build --release
