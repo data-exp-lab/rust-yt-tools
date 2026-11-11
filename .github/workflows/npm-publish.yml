@@ -1,31 +1,59 @@
-name: Cargo Public
+name: Publish to npm
+
+# Publishes @data-exp-lab/yt-tools when a GitHub release is published.
+#
+# Uses npm trusted publishing (OIDC), so no npm token is stored in the repo.
+# One-time setup on npmjs.com: package settings for @data-exp-lab/yt-tools ->
+# Trusted Publisher -> GitHub Actions, organization `data-exp-lab`,
+# repository `rust-yt-tools`, workflow `npm-publish.yml`.
 
 on:
   release:
-    types: [ created ]
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for npm trusted publishing
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   publish:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: wasm32-unknown-unknown
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        registry-url: 'https://registry.npmjs.org'
+
+    # Trusted publishing needs npm >= 11.5.1.
+    - name: Update npm
+      run: npm install -g npm@latest
+
+    - name: Check that the release tag matches Cargo.toml
+      run: |
+        version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+        if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+          echo "::error::Release tag $GITHUB_REF_NAME does not match Cargo.toml version v$version"
+          exit 1
+        fi
+
     - name: Install wasm-pack
       run: cargo install wasm-pack --locked
+
     - run: cargo test
-    - name: Scoped Build
-      env:
-        PACKAGE_SCOPE: data-exp-lab
-      run: wasm-pack build --release --scope $PACKAGE_SCOPE
-    - name: publish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-      run: wasm-pack publish
+
+    - name: Build scoped package
+      run: wasm-pack build --release --scope data-exp-lab
+
+    - name: Publish
+      working-directory: pkg
+      run: npm publish --access public
